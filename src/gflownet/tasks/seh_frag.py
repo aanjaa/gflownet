@@ -94,7 +94,7 @@ class SEHFragTrainer(StandardOnlineTrainer):
 
         cfg.algo.method = "TB"
         cfg.algo.max_nodes = 9
-        cfg.algo.sampling_tau = 0.9
+        #cfg.algo.sampling_tau = 0.9
         cfg.algo.illegal_action_logreward = -75
         cfg.algo.train_random_action_prob = 0.0
         cfg.algo.valid_random_action_prob = 0.0
@@ -121,27 +121,9 @@ class SEHFragTrainer(StandardOnlineTrainer):
         self.ctx = FragMolBuildingEnvContext(max_frags=self.cfg.algo.max_nodes, num_cond_dim=self.task.num_cond_dim)
 
 
-def main():
+def main(hps,use_wandb):
     """Example of how this model can be run outside of Determined"""
-    hps = {
-        "log_dir": "./logs/debug_run_seh_frag",
-        "device": torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
-        "overwrite_existing_exp": True,
-        "num_training_steps": 10_000,
-        "num_workers": 8,
-        "opt": {
-            "lr_decay": 20000,
-        },
-        "algo": {
-            "sampling_tau": 0.99,
-        },
-        "cond": {
-            "temperature": {
-                "sample_dist": "uniform",
-                "dist_params": [0, 64.0],
-            }
-        },
-    }
+
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
             shutil.rmtree(hps["log_dir"])
@@ -150,9 +132,31 @@ def main():
     os.makedirs(hps["log_dir"])
 
     trial = SEHFragTrainer(hps)
-    trial.print_every = 1
-    trial.run()
+    trial.print_every = 5
+    info_val = trial.run(use_wandb=use_wandb)
+    return info_val
 
 
 if __name__ == "__main__":
-    main()
+
+    hps = {
+    "log_dir": "./logs/debug_run_seh_frag",
+    "device": "cuda"  if torch.cuda.is_available() else "cpu",
+    "overwrite_existing_exp": True,
+    "num_training_steps": 1000, #10_000,
+    "validate_every":100,
+    "num_workers": 3,
+    "opt": {
+        "lr_decay": 20000,
+        },
+    "algo": {
+        "sampling_tau": 0.99,
+        },
+    "cond": {
+        "temperature": {
+            "sample_dist": "uniform",
+            "dist_params": [0, 64.0],
+            }
+        },
+    }
+    info_val = main(hps,use_wandb=True)

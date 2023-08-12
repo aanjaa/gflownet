@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Wandb logging
+wandb/
+
+# Logs
+logs/
+
+# VSCode
+launch.json

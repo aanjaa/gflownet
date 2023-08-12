@@ -354,67 +354,8 @@ class RepeatedCondInfoDataset:
         return torch.tensor(self.cond_info_vectors[int(idx // self.repeat)])
 
 
-def main():
+def main(hps):
     """Example of how this model can be run."""
-    hps = {
-        "log_dir": "./logs/debug_run_sfm",
-        "device": torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
-        "pickle_mp_messages": True,
-        "overwrite_existing_exp": True,
-        "seed": 0,
-        "num_training_steps": 500,
-        "num_final_gen_steps": 50,
-        "validate_every": 100,
-        "num_workers": 0,
-        "algo": {
-            "global_batch_size": 64,
-            "method": "TB",
-            "sampling_tau": 0.95,
-            "train_random_action_prob": 0.01,
-            "tb": {
-                "Z_learning_rate": 1e-3,
-                "Z_lr_decay": 50000,
-            },
-        },
-        "model": {
-            "num_layers": 2,
-            "num_emb": 256,
-        },
-        "task": {
-            "seh_moo": {
-                "objectives": ["seh", "qed"],
-                "n_valid": 15,
-                "n_valid_repeats": 128,
-            },
-        },
-        "opt": {
-            "learning_rate": 1e-4,
-            "lr_decay": 20000,
-        },
-        "cond": {
-            "temperature": {
-                "sample_dist": "constant",
-                "dist_params": [60.0],
-                "num_thermometer_dim": 32,
-            },
-            "weighted_prefs": {
-                "preference_type": "dirichlet",
-            },
-            "focus_region": {
-                "focus_type": None,  # "learned-tabular",
-                "focus_cosim": 0.98,
-                "focus_limit_coef": 1e-1,
-                "focus_model_training_limits": (0.25, 0.75),
-                "focus_model_state_space_res": 30,
-                "max_train_it": 5_000,
-            },
-        },
-        "replay": {
-            "use": False,
-            "warmup": 1000,
-            "hindsight_ratio": 0.0,
-        },
-    }
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
             shutil.rmtree(hps["log_dir"])
@@ -423,9 +364,70 @@ def main():
     os.makedirs(hps["log_dir"])
 
     trial = SEHMOOFragTrainer(hps)
-    trial.print_every = 1
-    trial.run()
+    trial.print_every = 5
+    info_val = trial.run()
+    return info_val
 
 
 if __name__ == "__main__":
-    main()
+
+    hps = {
+    "log_dir": "./logs/debug_run_sfm",
+    "device": "cuda" if torch.cuda.is_available() else "cpu",#torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
+    "pickle_mp_messages": True,
+    "overwrite_existing_exp": True,
+    "seed": 0,
+    "num_training_steps": 500,
+    "num_final_gen_steps": 50,
+    "validate_every": 100,
+    "num_workers": 0,
+    "algo": {
+        "global_batch_size": 64,
+        "method": "TB",
+        "sampling_tau": 0.95,
+        "train_random_action_prob": 0.01,
+        "tb": {
+            "Z_learning_rate": 1e-3,
+            "Z_lr_decay": 50000,
+        },
+    },
+    "model": {
+        "num_layers": 2,
+        "num_emb": 256,
+    },
+    "task": {
+        "seh_moo": {
+            "objectives": ["seh", "qed"],
+            "n_valid": 15,
+            "n_valid_repeats": 128,
+        },
+    },
+    "opt": {
+        "learning_rate": 1e-4,
+        "lr_decay": 20000,
+    },
+    "cond": {
+        "temperature": {
+            "sample_dist": "constant",
+            "dist_params": [60.0],
+            "num_thermometer_dim": 32,
+        },
+        "weighted_prefs": {
+            "preference_type": "dirichlet",
+        },
+        "focus_region": {
+            "focus_type": None,  # "learned-tabular",
+            "focus_cosim": 0.98,
+            "focus_limit_coef": 1e-1,
+            "focus_model_training_limits": (0.25, 0.75),
+            "focus_model_state_space_res": 30,
+            "max_train_it": 5_000,
+        },
+    },
+    "replay": {
+        "use": False,
+        "warmup": 1000,
+        "hindsight_ratio": 0.0,
+        },
+    }
+    info_val = main(hps)

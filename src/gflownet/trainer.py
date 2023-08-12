@@ -18,6 +18,8 @@ from gflownet.data.sampling_iterator import SamplingIterator
 from gflownet.envs.graph_building_env import GraphActionCategorical, GraphBuildingEnv, GraphBuildingEnvContext
 from gflownet.utils.misc import create_logger
 from gflownet.utils.multiprocessing_proxy import mp_object_wrapper
+from gflownet.utils.logging import prepend_keys, average_values_across_dicts
+import wandb
 
 from .config import Config
 
@@ -295,10 +297,12 @@ class GFNTrainer:
             info.update(batch.extra_info)
         return {k: v.item() if hasattr(v, "item") else v for k, v in info.items()}
 
-    def run(self, logger=None):
+    def run(self, use_wandb=False, logger=None):
         """Trains the GFN for `num_training_steps` minibatches, performing
         validation every `validate_every` minibatches.
         """
+        if use_wandb:
+            wandb.init(project='gflownet', sync_tensorboard=True, config=self.cfg)
         if logger is None:
             logger = create_logger(logfile=self.cfg.log_dir + "/train.log")
         self.model.to(self.device)
@@ -323,21 +327,26 @@ class GFNTrainer:
                     f"iteration {it} : warming up replay buffer {len(self.replay_buffer)}/{self.replay_buffer.warmup}"
                 )
                 continue
-            info = self.train_batch(batch.to(self.device), epoch_idx, batch_idx, it)
-            self.log(info, it, "train")
+            info_train = self.train_batch(batch.to(self.device), epoch_idx, batch_idx, it)
             if it % self.print_every == 0:
-                logger.info(f"iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info.items()))
+                logger.info(f"iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_train.items()))
+            info_train = prepend_keys(info_train,"train")
+            self.log(info_train, it)
 
-            if valid_freq > 0 and it % valid_freq == 0:
+            if (valid_freq > 0 and it % valid_freq == 0) or (it == num_training_steps):
+                info_val = []
                 for batch in valid_dl:
-                    info = self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx)
-                    self.log(info, it, "valid")
-                    logger.info(f"validation - iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info.items()))
+                    info_val.append(self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx))
+                info_val = average_values_across_dicts(info_val)
+                logger.info(f"VALIDATION - iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_val.items()))
+                info_val = prepend_keys(info_val,"val")
+                self.log(info_val, it)
                 end_metrics = {}
                 for c in callbacks.values():
                     if hasattr(c, "on_validation_end"):
                         c.on_validation_end(end_metrics)
-                self.log(end_metrics, it, "valid_end")
+                end_metrics = prepend_keys(end_metrics,"val_end")
+                self.log(end_metrics, it)
             if ckpt_freq > 0 and it % ckpt_freq == 0:
                 self._save_state(it)
         self._save_state(num_training_steps)
@@ -352,6 +361,10 @@ class GFNTrainer:
                 pass
             logger.info("Final generation steps completed.")
 
+        if use_wandb:
+            wandb.finish()
+        return info_val
+
     def _save_state(self, it):
         torch.save(
             {
@@ -362,11 +375,13 @@ class GFNTrainer:
             open(pathlib.Path(self.cfg.log_dir) / "model_state.pt", "wb"),
         )
 
-    def log(self, info, index, key):
+    def log(self, info, index):
         if not hasattr(self, "_summary_writer"):
             self._summary_writer = torch.utils.tensorboard.SummaryWriter(self.cfg.log_dir)
         for k, v in info.items():
-            self._summary_writer.add_scalar(f"{key}_{k}", v, index)
+            #self._summary_writer.add_scalar(f"{key}_{k}", v, index)
+            self._summary_writer.add_scalar(k, v, index)
+
 
 
 def cycle(it):
