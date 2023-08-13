@@ -1,0 +1,370 @@
+[=== Module python/3.10 loaded ===]
+
+======== GPU REPORT ========
+
+==============NVSMI LOG==============
+
+Timestamp                                 : Sat Aug 12 21:06:41 2023
+Driver Version                            : 515.65.01
+CUDA Version                              : 11.7
+
+Attached GPUs                             : 1
+GPU 00000000:C3:00.0
+    Accounting Mode                       : Enabled
+    Accounting Mode Buffer Size           : 4000
+    Accounted Processes                   : None
+
+Sat Aug 12 21:06:42 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.65.01    Driver Version: 515.65.01    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Quadro RTX 8000     On   | 00000000:C3:00.0 Off |                  Off |
+| 33%   25C    P8    25W / 260W |      1MiB / 49152MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+IP Head: 172.16.8.96:6378
+Starting HEAD at cn-c002
+2023-08-12 21:06:45,615	INFO usage_lib.py:407 -- Usage stats collection is enabled by default without user confirmation because this terminal is detected to be non-interactive. To disable this, add `--disable-usage-stats` to the command that starts the cluster, or run the following command: `ray disable-usage-stats` before starting the cluster. See https://docs.ray.io/en/master/cluster/usage-stats.html for more details.
+2023-08-12 21:06:45,616	INFO scripts.py:722 -- [37mLocal node IP[39m: [1m172.16.8.96[22m
+2023-08-12 21:06:51,061	SUCC scripts.py:759 -- [32m--------------------[39m
+2023-08-12 21:06:51,061	SUCC scripts.py:760 -- [32mRay runtime started.[39m
+2023-08-12 21:06:51,061	SUCC scripts.py:761 -- [32m--------------------[39m
+2023-08-12 21:06:51,061	INFO scripts.py:763 -- [36mNext steps[39m
+2023-08-12 21:06:51,061	INFO scripts.py:766 -- To add another node to this Ray cluster, run
+2023-08-12 21:06:51,061	INFO scripts.py:769 -- [1m  ray start --address='172.16.8.96:6378'[22m
+2023-08-12 21:06:51,061	INFO scripts.py:778 -- To connect to this Ray cluster:
+2023-08-12 21:06:51,061	INFO scripts.py:780 -- [35mimport[39m[26m ray
+2023-08-12 21:06:51,061	INFO scripts.py:781 -- ray[35m.[39m[26minit(_node_ip_address[35m=[39m[26m[33m'172.16.8.96'[39m[26m)
+2023-08-12 21:06:51,061	INFO scripts.py:793 -- To submit a Ray job using the Ray Jobs CLI:
+2023-08-12 21:06:51,061	INFO scripts.py:794 -- [1m  RAY_ADDRESS='http://127.0.0.1:8265' ray job submit --working-dir . -- python my_script.py[22m
+2023-08-12 21:06:51,061	INFO scripts.py:803 -- See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/index.html 
+2023-08-12 21:06:51,061	INFO scripts.py:807 -- for more information on submitting Ray jobs to the Ray cluster.
+2023-08-12 21:06:51,061	INFO scripts.py:812 -- To terminate the Ray runtime, run
+2023-08-12 21:06:51,062	INFO scripts.py:813 -- [1m  ray stop[22m
+2023-08-12 21:06:51,062	INFO scripts.py:816 -- To view the status of the cluster, use
+2023-08-12 21:06:51,062	INFO scripts.py:817 --   [1mray status[22m[26m
+2023-08-12 21:06:51,062	INFO scripts.py:821 -- To monitor and debug Ray, view the dashboard at 
+2023-08-12 21:06:51,062	INFO scripts.py:822 --   [1m127.0.0.1:8265[22m[26m
+2023-08-12 21:06:51,062	INFO scripts.py:829 -- [4mIf connection to the dashboard fails, check your firewall settings and network configuration.[24m
+2023-08-12 21:06:51,062	INFO scripts.py:929 -- [36m[1m--block[22m[39m
+2023-08-12 21:06:51,062	INFO scripts.py:930 -- This command will now block forever until terminated by a signal.
+2023-08-12 21:06:51,062	INFO scripts.py:933 -- Running subprocesses are monitored and a message will be printed if any of them terminate unexpectedly. Subprocesses exit with SIGTERM will be treated as graceful, thus NOT reported.
+/home/mila/a/anja.surina/venvs/gflownet/lib/python3.9/site-packages/ray/air/config.py:803: UserWarning: Setting a `RunConfig.local_dir` is deprecated and will be removed in the future. If you are not using remote storage,set the `RunConfig.storage_path` instead. Otherwise, set the`RAY_AIR_LOCAL_CACHE_DIR` environment variable to control the local cache location.
+  warnings.warn(
+2023-08-12 21:07:04,349	INFO worker.py:1431 -- Connecting to existing Ray cluster at address: 172.16.8.96:6378...
+2023-08-12 21:07:04,388	INFO worker.py:1612 -- Connected to Ray cluster. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+2023-08-12 21:07:05,542	INFO tune.py:226 -- Initializing Ray automatically. For cluster usage or custom Ray initialization, call `ray.init(...)` before `Tuner(...)`.
+2023-08-12 21:07:05,544	INFO tune.py:666 -- [output] This will use the new output engine with verbosity 2. To disable the new output and use the legacy output engine, set the environment variable RAY_AIR_NEW_OUTPUT=0. For more information, please see https://github.com/ray-project/ray/issues/36949
+2023-08-12 21:07:34,845	WARNING worker.py:2033 -- A worker died or was killed while executing a task by an unexpected system error. To troubleshoot the problem, check the logs for the dead worker. RayTask ID: ffffffffffffffff404f438cfadbdea4b564542e01000000 Worker ID: 888141792764adf25db58b5254961a503ee947d46f45d9461b2ea34a Node ID: 81915e44bc38d0ae9229026c92f29ed67ddcd2476b0246c0badfd413 Worker IP address: 172.16.8.96 Worker port: 10004 Worker PID: 25240 Worker exit type: SYSTEM_ERROR Worker exit detail: Worker unexpectedly exits with a connection error code 2. End of file. There are some potential root causes. (1) The process is killed by SIGKILL by OOM killer due to high memory usage. (2) ray stop --force is called. (3) The worker is crashed unexpectedly due to SIGSEGV or other unexpected errors.
+2023-08-12 21:07:34,881	ERROR tune_controller.py:911 -- Trial task failed for trial main_b731d_00000
+Traceback (most recent call last):
+  File "/home/mila/a/anja.surina/venvs/gflownet/lib/python3.9/site-packages/ray/air/execution/_internal/event_manager.py", line 110, in resolve_future
+    result = ray.get(future)
+  File "/home/mila/a/anja.surina/venvs/gflownet/lib/python3.9/site-packages/ray/_private/auto_init_hook.py", line 24, in auto_init_wrapper
+    return fn(*args, **kwargs)
+  File "/home/mila/a/anja.surina/venvs/gflownet/lib/python3.9/site-packages/ray/_private/client_mode_hook.py", line 103, in wrapper
+    return func(*args, **kwargs)
+  File "/home/mila/a/anja.surina/venvs/gflownet/lib/python3.9/site-packages/ray/_private/worker.py", line 2522, in get
+    raise value
+ray.exceptions.RayActorError: The actor died unexpectedly before finishing this task.
+	class_name: ImplicitFunc
+	actor_id: 404f438cfadbdea4b564542e01000000
+	pid: 25240
+	namespace: f03148af-346f-437f-984f-175d685b739d
+	ip: 172.16.8.96
+The actor is dead because its worker process has died. Worker exit type: SYSTEM_ERROR Worker exit detail: Worker unexpectedly exits with a connection error code 2. End of file. There are some potential root causes. (1) The process is killed by SIGKILL by OOM killer due to high memory usage. (2) ray stop --force is called. (3) The worker is crashed unexpectedly due to SIGSEGV or other unexpected errors.
+2023-08-12 21:07:34,898	ERROR tune.py:1144 -- Trials did not complete: [main_b731d_00000]
+2023-08-12 21:07:34,909	WARNING experiment_analysis.py:916 -- Failed to read the results for 1 trials:
+- /home/mila/a/anja.surina/gflownet/logs/debug_run_seh_frag/details/main_b731d_00000_0_Z_learning_rate=0.0001,Z_lr_decay=100000,learning_rate=0.0000,lr_decay=1000_2023-08-12_21-07-05
+╭────────────────────────────────────────────────────────╮
+│ Configuration for experiment     details               │
+├────────────────────────────────────────────────────────┤
+│ Search algorithm                 BasicVariantGenerator │
+│ Scheduler                        FIFOScheduler         │
+│ Number of trials                 1                     │
+╰────────────────────────────────────────────────────────╯
+
+View detailed results here: /home/mila/a/anja.surina/gflownet/logs/debug_run_seh_frag/details
+To visualize your results with TensorBoard, run: `tensorboard --logdir /home/mila/a/anja.surina/gflownet/logs/debug_run_seh_frag/details`
+
+Trial status: 1 PENDING
+Current time: 2023-08-12 21:07:06. Total running time: 0s
+Logical resource usage: 0/1 CPUs, 0/1 GPUs (0.0/1.0 accelerator_type:RTX)
+╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Trial name         status       opt/learning_rate     opt/lr_decay     ...b/Z_learning_rate     algo/tb/Z_lr_decay │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ main_b731d_00000   PENDING                  1e-05             1000                   0.0001                 100000 │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Training started with configuration:
+╭──────────────────────────────────────────────────────╮
+│ Training config                                      │
+├──────────────────────────────────────────────────────┤
+│ algo/global_batch_size                            64 │
+│ algo/illegal_action_logreward                    -75 │
+│ algo/max_nodes                                     9 │
+│ algo/method                                       TB │
+│ algo/offline_ratio                               0.0 │
+│ algo/sampling_tau                                0.9 │
+│ algo/tb/Z_learning_rate                       0.0001 │
+│ algo/tb/Z_lr_decay                            100000 │
+│ algo/tb/bootstrap_own_reward                   False │
+│ algo/tb/do_parameterize_p_b                    False │
+│ algo/tb/do_subtb                               False │
+│ algo/tb/epsilon                                      │
+│ algo/train_random_action_prob                    0.0 │
+│ algo/valid_offline_ratio                         0.0 │
+│ algo/valid_random_action_prob                    0.0 │
+│ cond/temperature/dist_params               [0, 64.0] │
+│ cond/temperature/sample_dist                 uniform │
+│ device                                           cpu │
+│ log_dir                         ...ebug_run_seh_frag │
+│ model/num_emb                                    128 │
+│ model/num_layers                                   4 │
+│ num_training_steps                             10000 │
+│ num_workers                                        0 │
+│ opt/adam_eps                                   1e-08 │
+│ opt/clip_grad_param                               10 │
+│ opt/clip_grad_type                              norm │
+│ opt/learning_rate                              1e-05 │
+│ opt/lr_decay                                    1000 │
+│ opt/momentum                                     0.9 │
+│ opt/opt                                         adam │
+│ opt/weight_decay                               1e-08 │
+│ overwrite_existing_exp                          True │
+│ print_every                                      100 │
+│ replay/capacity                                10000 │
+│ replay/hindsight_ratio                           0.0 │
+│ replay/use                                     False │
+│ replay/warmup                                   1000 │
+│ seed                                               0 │
+│ validate_every                                  1000 │
+╰──────────────────────────────────────────────────────╯
+
+[2m[36m(func pid=25240)[0m 
+[2m[36m(func pid=25240)[0m 
+[2m[36m(func pid=25240)[0m Hyperparameters:
+[2m[36m(func pid=25240)[0m 
+[2m[36m(func pid=25240)[0m log_dir: ./logs/debug_run_seh_frag
+[2m[36m(func pid=25240)[0m device: cpu
+[2m[36m(func pid=25240)[0m seed: 0
+[2m[36m(func pid=25240)[0m validate_every: 1000
+[2m[36m(func pid=25240)[0m checkpoint_every: null
+[2m[36m(func pid=25240)[0m print_every: 100
+[2m[36m(func pid=25240)[0m start_at_step: 0
+[2m[36m(func pid=25240)[0m num_final_gen_steps: null
+[2m[36m(func pid=25240)[0m num_training_steps: 10000
+[2m[36m(func pid=25240)[0m num_workers: 0
+[2m[36m(func pid=25240)[0m hostname: cn-c002
+[2m[36m(func pid=25240)[0m pickle_mp_messages: false
+[2m[36m(func pid=25240)[0m git_hash: '3522131'
+[2m[36m(func pid=25240)[0m overwrite_existing_exp: true
+[2m[36m(func pid=25240)[0m algo:
+[2m[36m(func pid=25240)[0m   method: TB
+[2m[36m(func pid=25240)[0m   global_batch_size: 64
+[2m[36m(func pid=25240)[0m   max_len: 128
+[2m[36m(func pid=25240)[0m   max_nodes: 9
+[2m[36m(func pid=25240)[0m   max_edges: 128
+[2m[36m(func pid=25240)[0m   illegal_action_logreward: -75.0
+[2m[36m(func pid=25240)[0m   offline_ratio: 0.0
+[2m[36m(func pid=25240)[0m   valid_offline_ratio: 0.0
+[2m[36m(func pid=25240)[0m   train_random_action_prob: 0.0
+[2m[36m(func pid=25240)[0m   valid_random_action_prob: 0.0
+[2m[36m(func pid=25240)[0m   valid_sample_cond_info: true
+[2m[36m(func pid=25240)[0m   sampling_tau: 0.9
+[2m[36m(func pid=25240)[0m   tb:
+[2m[36m(func pid=25240)[0m     bootstrap_own_reward: false
+[2m[36m(func pid=25240)[0m     epsilon: null
+[2m[36m(func pid=25240)[0m     reward_loss_multiplier: 1.0
+[2m[36m(func pid=25240)[0m     do_subtb: false
+[2m[36m(func pid=25240)[0m     do_correct_idempotent: false
+[2m[36m(func pid=25240)[0m     do_parameterize_p_b: false
+[2m[36m(func pid=25240)[0m     subtb_max_len: 128
+[2m[36m(func pid=25240)[0m     Z_learning_rate: 0.0001
+[2m[36m(func pid=25240)[0m     Z_lr_decay: 100000.0
+[2m[36m(func pid=25240)[0m   moql:
+[2m[36m(func pid=25240)[0m     gamma: 1.0
+[2m[36m(func pid=25240)[0m     num_omega_samples: 32
+[2m[36m(func pid=25240)[0m     num_objectives: 2
+[2m[36m(func pid=25240)[0m     lambda_decay: 10000
+[2m[36m(func pid=25240)[0m     penalty: -10.0
+[2m[36m(func pid=25240)[0m   a2c:
+[2m[36m(func pid=25240)[0m     entropy: 0.01
+[2m[36m(func pid=25240)[0m     gamma: 1.0
+[2m[36m(func pid=25240)[0m     penalty: -10.0
+[2m[36m(func pid=25240)[0m   fm:
+[2m[36m(func pid=25240)[0m     epsilon: 1.0e-38
+[2m[36m(func pid=25240)[0m     balanced_loss: false
+[2m[36m(func pid=25240)[0m     leaf_coef: 10.0
+[2m[36m(func pid=25240)[0m     correct_idempotent: false
+[2m[36m(func pid=25240)[0m   sql:
+[2m[36m(func pid=25240)[0m     alpha: 0.01
+[2m[36m(func pid=25240)[0m     gamma: 1.0
+[2m[36m(func pid=25240)[0m     penalty: -10.0
+[2m[36m(func pid=25240)[0m model:
+[2m[36m(func pid=25240)[0m   num_layers: 4
+[2m[36m(func pid=25240)[0m   num_emb: 128
+[2m[36m(func pid=25240)[0m   graph_transformer:
+[2m[36m(func pid=25240)[0m     num_heads: 2
+[2m[36m(func pid=25240)[0m     ln_type: pre
+[2m[36m(func pid=25240)[0m     num_mlp_layers: 0
+[2m[36m(func pid=25240)[0m opt:
+[2m[36m(func pid=25240)[0m   opt: adam
+[2m[36m(func pid=25240)[0m   learning_rate: 1.0e-05
+[2m[36m(func pid=25240)[0m   lr_decay: 1000.0
+[2m[36m(func pid=25240)[0m   weight_decay: 1.0e-08
+[2m[36m(func pid=25240)[0m   momentum: 0.9
+[2m[36m(func pid=25240)[0m   clip_grad_type: norm
+[2m[36m(func pid=25240)[0m   clip_grad_param: 10.0
+[2m[36m(func pid=25240)[0m   adam_eps: 1.0e-08
+[2m[36m(func pid=25240)[0m replay:
+[2m[36m(func pid=25240)[0m   use: false
+[2m[36m(func pid=25240)[0m   capacity: 10000
+[2m[36m(func pid=25240)[0m   warmup: 1000
+[2m[36m(func pid=25240)[0m   hindsight_ratio: 0.0
+[2m[36m(func pid=25240)[0m task:
+[2m[36m(func pid=25240)[0m   qm9:
+[2m[36m(func pid=25240)[0m     h5_path: ./data/qm9/qm9.h5
+[2m[36m(func pid=25240)[0m     model_path: ./data/qm9/qm9_model.pt
+[2m[36m(func pid=25240)[0m   seh: {}
+[2m[36m(func pid=25240)[0m   seh_moo:
+[2m[36m(func pid=25240)[0m     use_steer_thermometer: false
+[2m[36m(func pid=25240)[0m     preference_type: dirichlet
+[2m[36m(func pid=25240)[0m     focus_type: null
+[2m[36m(func pid=25240)[0m     focus_dirs_listed: null
+[2m[36m(func pid=25240)[0m     focus_cosim: 0.0
+[2m[36m(func pid=25240)[0m     focus_limit_coef: 1.0
+[2m[36m(func pid=25240)[0m     focus_model_training_limits: null
+[2m[36m(func pid=25240)[0m     focus_model_state_space_res: null
+[2m[36m(func pid=25240)[0m     max_train_it: null
+[2m[36m(func pid=25240)[0m     n_valid: 15
+[2m[36m(func pid=25240)[0m     n_valid_repeats: 128
+[2m[36m(func pid=25240)[0m     objectives:
+[2m[36m(func pid=25240)[0m     - seh
+[2m[36m(func pid=25240)[0m     - qed
+[2m[36m(func pid=25240)[0m     - sa
+[2m[36m(func pid=25240)[0m     - mw
+[2m[36m(func pid=25240)[0m cond:
+[2m[36m(func pid=25240)[0m   temperature:
+[2m[36m(func pid=25240)[0m     sample_dist: uniform
+[2m[36m(func pid=25240)[0m     dist_params:
+[2m[36m(func pid=25240)[0m     - 0
+[2m[36m(func pid=25240)[0m     - 64.0
+[2m[36m(func pid=25240)[0m     num_thermometer_dim: 32
+[2m[36m(func pid=25240)[0m   moo:
+[2m[36m(func pid=25240)[0m     num_objectives: 2
+[2m[36m(func pid=25240)[0m     num_thermometer_dim: 16
+[2m[36m(func pid=25240)[0m   weighted_prefs:
+[2m[36m(func pid=25240)[0m     preference_type: dirichlet
+[2m[36m(func pid=25240)[0m   focus_region:
+[2m[36m(func pid=25240)[0m     focus_type: learned-tabular
+[2m[36m(func pid=25240)[0m     use_steer_thermomether: false
+[2m[36m(func pid=25240)[0m     focus_cosim: 0.98
+[2m[36m(func pid=25240)[0m     focus_limit_coef: 0.1
+[2m[36m(func pid=25240)[0m     focus_model_training_limits:
+[2m[36m(func pid=25240)[0m     - 0.25
+[2m[36m(func pid=25240)[0m     - 0.75
+[2m[36m(func pid=25240)[0m     focus_model_state_space_res: 30
+[2m[36m(func pid=25240)[0m     max_train_it: 20000
+[2m[36m(func pid=25240)[0m 
+[2m[36m(func pid=25240)[0m 12/08/2023 21:07:20 - INFO - logger - Starting training
+Trial status: 1 ERROR
+Current time: 2023-08-12 21:07:34. Total running time: 29s
+Logical resource usage: 0/1 CPUs, 0/1 GPUs (0.0/1.0 accelerator_type:RTX)
+╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Trial name         status       opt/learning_rate     opt/lr_decay     ...b/Z_learning_rate     algo/tb/Z_lr_decay │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ main_b731d_00000   ERROR                    1e-05             1000                   0.0001                 100000 │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Number of errored trials: 1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Trial name           # failures   error file                                                                                                                                                                                     │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ main_b731d_00000              1   /home/mila/a/anja.surina/gflownet/logs/debug_run_seh_frag/details/main_b731d_00000_0_Z_learning_rate=0.0001,Z_lr_decay=100000,learning_rate=0.0000,lr_decay=1000_2023-08-12_21-07-05/error.txt │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ERROR!
+
+======== GPU REPORT ========
+
+==============NVSMI LOG==============
+
+Timestamp                                 : Sat Aug 12 21:07:36 2023
+Driver Version                            : 515.65.01
+CUDA Version                              : 11.7
+
+Attached GPUs                             : 1
+GPU 00000000:C3:00.0
+    Accounting Mode                       : Enabled
+    Accounting Mode Buffer Size           : 4000
+    Accounted Processes                   : None
+
+Sat Aug 12 21:07:36 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.65.01    Driver Version: 515.65.01    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Quadro RTX 8000     On   | 00000000:C3:00.0 Off |                  Off |
+| 33%   25C    P8    26W / 260W |      1MiB / 49152MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=3486300.batch. Some of your processes may have been killed by the cgroup out-of-memory handler.
+
+======== GPU REPORT ========
+
+==============NVSMI LOG==============
+
+Timestamp                                 : Sat Aug 12 21:07:39 2023
+Driver Version                            : 515.65.01
+CUDA Version                              : 11.7
+
+Attached GPUs                             : 1
+GPU 00000000:C3:00.0
+    Accounting Mode                       : Enabled
+    Accounting Mode Buffer Size           : 4000
+    Accounted Processes                   : None
+
+Sat Aug 12 21:07:39 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.65.01    Driver Version: 515.65.01    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Quadro RTX 8000     On   | 00000000:C3:00.0 Off |                  Off |
+| 33%   25C    P8    26W / 260W |      1MiB / 49152MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+

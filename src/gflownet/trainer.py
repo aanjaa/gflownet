@@ -20,6 +20,7 @@ from gflownet.utils.misc import create_logger
 from gflownet.utils.multiprocessing_proxy import mp_object_wrapper
 from gflownet.utils.logging import prepend_keys, average_values_across_dicts
 import wandb
+import omegaconf
 
 from .config import Config
 
@@ -302,7 +303,7 @@ class GFNTrainer:
         validation every `validate_every` minibatches.
         """
         if use_wandb:
-            wandb.init(project='gflownet', sync_tensorboard=True, config=self.cfg)
+            wandb.init(project='gflownet', sync_tensorboard=True, config = omegaconf.OmegaConf.to_container(self.cfg))
         if logger is None:
             logger = create_logger(logfile=self.cfg.log_dir + "/train.log")
         self.model.to(self.device)

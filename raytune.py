@@ -84,17 +84,17 @@ if __name__ == "__main__":
 
     learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4,3e-5,1e-5])
     Z_learning_rate = tune.choice([3e-1,1e-1,3e-2,1e-2,3e-3,1e-3,3e-4,1e-4])
-    Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000,0])
-    lr_decay = tune.choice([20_000,10_000,1_000,0])
+    Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000])
+    lr_decay = tune.choice([20_000,10_000,1_000])
 
     search_space = {
     "log_dir": "./logs/debug_run_seh_frag",
-    "device": "cuda" if torch.cuda.is_available() else "cpu",
+    "device": "cpu",#"cuda" if torch.cuda.is_available() else "cpu",
     "seed": 0, # TODO: how is seed handled?
     "validate_every": 1000,
     "print_every": 100,
     "num_training_steps": 10_000,
-    "num_workers": 5,
+    "num_workers": 0,
     "overwrite_existing_exp": True,
     "algo": {
         "method": method,
