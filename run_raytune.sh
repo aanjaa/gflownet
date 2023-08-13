@@ -3,16 +3,12 @@
 #SBATCH --partition=unkillable
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=20GB
+#SBATCH --cpus-per-task=2
+#SBATCH --mem-per-cpu=10GB
 #SBATCH --gpus-per-task=1
 
 # Loading your environment
-module load python/3.10
-
 source ~/venvs/gflownet/bin/activate
-
-export PYTHONPATH=$PYTHONPATH:/$HOME/torchgfn/src
 
 ## RAY
 # Getting the node names
@@ -35,7 +31,7 @@ echo "IPV6 address detected. We split the IPV4 address as $head_node_ip"
 fi
 
 
-port=6378
+port=6379
 ip_head=$head_node_ip:$port
 export ip_head
 echo "IP Head: $ip_head"

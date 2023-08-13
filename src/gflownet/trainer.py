@@ -122,11 +122,9 @@ class GFNTrainer:
         #   - The default values specified in the `default_hps` method, typically what is defined by a task
         #   - The values passed in the constructor, typically what is called by the user
         # The final config is obtained by merging the three sources
+        # NEW: option to get configs from wandb sweeps
         self.cfg: Config = OmegaConf.structured(Config())
-        self.set_default_hps(self.cfg)
-        # OmegaConf returns a fancy object but we can still pretend it's a Config instance
-        self.cfg = OmegaConf.merge(self.cfg, hps)  # type: ignore
-
+        self.cfg = self.setup_config(hps)
         self.device = torch.device(self.cfg.device)
         # Print the loss every `self.print_every` iterations
         self.print_every = self.cfg.print_every
@@ -137,6 +135,40 @@ class GFNTrainer:
         self._validate_parameters = False
 
         self.setup()
+
+    def setup_config(self,hps):
+        self.set_default_hps(self.cfg)
+        # OmegaConf returns a fancy object but we can still pretend it's a Config instance
+        self.cfg = OmegaConf.merge(self.cfg, hps)  # type: ignore
+        
+        # Params we hyperoptimize over
+        sweep_config = {
+            "learning_rate":1e-4, 
+            "Z_learning_rate": 1e-3,
+            "Z_lr_decay":50_000,
+            "lr_decay": 20_000,
+        }
+        # Get wandb to generate params we sweep over
+        wandb.init(project=self.cfg.experiment_name, sync_tensorboard=True, config=sweep_config)
+        print(wandb.config)
+
+        # Convert wandb.config to onethat can be merged with omegaconf
+        wandb_hps = {
+            "opt":{
+                "learning_rate": wandb.config["learning_rate"],
+                "lr_decay": wandb.config["lr_decay"],
+            },
+            "algo":{
+                "tb":{
+                    "Z_learning_rate": wandb.config["Z_learning_rate"],
+                    "Z_lr_decay": wandb.config["Z_lr_decay"],
+                }
+            }
+        }
+
+        cfg = OmegaConf.merge(self.cfg, wandb_hps)
+        return cfg
+
 
     def set_default_hps(self, base: Config):
         raise NotImplementedError()
@@ -298,12 +330,10 @@ class GFNTrainer:
             info.update(batch.extra_info)
         return {k: v.item() if hasattr(v, "item") else v for k, v in info.items()}
 
-    def run(self, use_wandb=False, logger=None):
+    def run(self, logger=None):
         """Trains the GFN for `num_training_steps` minibatches, performing
         validation every `validate_every` minibatches.
         """
-        if use_wandb:
-            wandb.init(project='gflownet', sync_tensorboard=True, config = omegaconf.OmegaConf.to_container(self.cfg))
         if logger is None:
             logger = create_logger(logfile=self.cfg.log_dir + "/train.log")
         self.model.to(self.device)
@@ -362,8 +392,7 @@ class GFNTrainer:
                 pass
             logger.info("Final generation steps completed.")
 
-        if use_wandb:
-            wandb.finish()
+        wandb.finish()
         return info_val
 
     def _save_state(self, it):

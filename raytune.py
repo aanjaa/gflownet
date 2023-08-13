@@ -2,6 +2,7 @@ import copy
 import functools
 import json
 import os
+import shutil
 
 from ray import air, tune
 from ray.tune.search.basic_variant import BasicVariantGenerator
@@ -11,6 +12,7 @@ from gflownet.tasks.seh_frag import main
 from argparse import ArgumentParser
 import time
 import torch
+import ray
 
 def replace_dict_key(dictionary, key, value):
     keys = key.split(".")
@@ -78,14 +80,14 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Training objective {training_objective} not supported")
 
-    num_samples = 1
+    num_samples = 3
 
     method = "TB" 
 
     learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4,3e-5,1e-5])
+    lr_decay = tune.choice([20_000,10_000,1_000])
     Z_learning_rate = tune.choice([3e-1,1e-1,3e-2,1e-2,3e-3,1e-3,3e-4,1e-4])
     Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000])
-    lr_decay = tune.choice([20_000,10_000,1_000])
 
     search_space = {
     "log_dir": "./logs/debug_run_seh_frag",
@@ -94,7 +96,7 @@ if __name__ == "__main__":
     "validate_every": 1000,
     "print_every": 100,
     "num_training_steps": 10_000,
-    "num_workers": 0,
+    "num_workers": 1,
     "overwrite_existing_exp": True,
     "algo": {
         "method": method,
@@ -143,14 +145,21 @@ if __name__ == "__main__":
         },
     }
 
+    if os.path.exists(search_space["log_dir"]):
+        if search_space["overwrite_existing_exp"]:
+            shutil.rmtree(search_space["log_dir"])
+        else:
+            raise ValueError(f"Log dir {search_space['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
+    os.makedirs(search_space["log_dir"])
+
     # Save the search space
     with open(os.path.join(search_space["log_dir"] + "/" + time.strftime("%d.%m_%H:%M:%S") + ".json"), 'w') as fp:
         json.dump(search_space, fp, sort_keys=True, indent=4, skipkeys=True,
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
     tuner = tune.Tuner(
-        #tune.with_resources(functools.partial(main, use_wandb=False), {"cpu": 1.0, "gpu": 1.0}),
-        functools.partial(main, use_wandb=False),
+        tune.with_resources(functools.partial(main, use_wandb=False), {"cpu": 1.0, "gpu": 1.0}),
+        #functools.partial(main, use_wandb=False),
         param_space=search_space,
         tune_config=tune.TuneConfig(
             metric=metric,
@@ -163,9 +172,12 @@ if __name__ == "__main__":
         ),
         run_config=air.RunConfig(name="details", verbose=2,local_dir=search_space["log_dir"], log_to_file=False)
     )
+    
+    ray.init()
+
+    results = tuner.fit()
 
     # Generate txt files
-    results = tuner.fit()
     if results.errors:
         print("ERROR!")
     else:
