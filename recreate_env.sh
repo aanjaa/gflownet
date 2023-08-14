@@ -11,3 +11,4 @@ pip install -e . --find-links https://data.pyg.org/whl/torch-1.13.1+cu117.html
 pip install --upgrade torch_geometric
 pip install wandb
 pip install -U "ray[air]"
+pip install PyTDC

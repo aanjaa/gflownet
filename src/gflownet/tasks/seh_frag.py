@@ -79,7 +79,8 @@ class SEHFragTrainer(StandardOnlineTrainer):
     def set_default_hps(self, cfg: Config):
         cfg.hostname = socket.gethostname()
         cfg.pickle_mp_messages = False
-        cfg.num_workers = 8
+        cfg.num_workers = 5
+
         cfg.opt.learning_rate = 1e-4
         cfg.opt.weight_decay = 1e-8
         cfg.opt.momentum = 0.9
@@ -87,14 +88,12 @@ class SEHFragTrainer(StandardOnlineTrainer):
         cfg.opt.lr_decay = 20_000
         cfg.opt.clip_grad_type = "norm"
         cfg.opt.clip_grad_param = 10
+
         cfg.algo.global_batch_size = 64
         cfg.algo.offline_ratio = 0
-        cfg.model.num_emb = 128
-        cfg.model.num_layers = 4
-
         cfg.algo.method = "TB"
         cfg.algo.max_nodes = 9
-        #cfg.algo.sampling_tau = 0.9
+        cfg.algo.sampling_tau = 0.9
         cfg.algo.illegal_action_logreward = -75
         cfg.algo.train_random_action_prob = 0.0
         cfg.algo.valid_random_action_prob = 0.0
@@ -105,9 +104,15 @@ class SEHFragTrainer(StandardOnlineTrainer):
         cfg.algo.tb.Z_lr_decay = 50_000
         cfg.algo.tb.do_parameterize_p_b = False
 
+        cfg.model.num_emb = 128
+        cfg.model.num_layers = 4
+
         cfg.replay.use = False
         cfg.replay.capacity = 10_000
         cfg.replay.warmup = 1_000
+
+        cfg.cond.temperature.sample_dist = "uniform"
+        cfg.cond.temperature.dist_params = [0,64.0]
 
     def setup_task(self):
         self.task = SEHTask(
@@ -131,7 +136,7 @@ def main():
     "validate_every":100,
     "num_workers": 1,
     "opt": {
-        "lr_decay": 20000,
+        "lr_decay": 20_000,
         },
     "algo": {
         "sampling_tau": 0.99,
@@ -153,7 +158,7 @@ def main():
 
     trial = SEHFragTrainer(hps)
     trial.print_every = 5
-    info_val = trial.run(use_wandb=True)
+    info_val = trial.run()
 
 
 if __name__ == "__main__":

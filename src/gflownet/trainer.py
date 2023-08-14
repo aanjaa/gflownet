@@ -142,17 +142,17 @@ class GFNTrainer:
         self.cfg = OmegaConf.merge(self.cfg, hps)  # type: ignore
         
         # Params we hyperoptimize over
-        sweep_config = {
-            "learning_rate":1e-4, 
-            "Z_learning_rate": 1e-3,
-            "Z_lr_decay":50_000,
-            "lr_decay": 20_000,
+        wandb_config = {
+            "learning_rate":self.cfg.opt.learning_rate, 
+            "lr_decay": self.cfg.opt.lr_decay,
+            "Z_learning_rate": self.cfg.algo.tb.Z_learning_rate,
+            "Z_lr_decay":self.cfg.algo.tb.Z_lr_decay,
         }
         # Get wandb to generate params we sweep over
-        wandb.init(project=self.cfg.experiment_name, sync_tensorboard=True, config=sweep_config)
+        wandb.init(project=self.cfg.experiment_name, sync_tensorboard=True, config=wandb_config)
         print(wandb.config)
 
-        # Convert wandb.config to onethat can be merged with omegaconf
+        # Convert wandb.config to one that can be merged with omegaconf
         wandb_hps = {
             "opt":{
                 "learning_rate": wandb.config["learning_rate"],
@@ -165,7 +165,6 @@ class GFNTrainer:
                 }
             }
         }
-
         cfg = OmegaConf.merge(self.cfg, wandb_hps)
         return cfg
 

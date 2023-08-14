@@ -8,6 +8,7 @@ import shutil
 
 # Create a sweep
 count = 5  # Number of hyperparameter combinations to try
+sweep_name = "sweep_seh_frag"
 sweep_config = {
     'method': 'random'
     }
@@ -18,8 +19,6 @@ search_space= {
     "Z_learning_rate": {'values': [3e-1,1e-1,3e-2,1e-2,3e-3,1e-3,3e-4,1e-4]},
     "Z_lr_decay": {'values': [100_000,50_000,20_000,1_000]},
     }
-
-
 
 metric = {
     'name': 'val_loss',
@@ -71,7 +70,7 @@ def train():
             "do_subtb": do_subtb,
             "Z_learning_rate": 1e-4, #Z_learning_rate,
             "Z_lr_decay": 50_000, #Z_lr_decay,
-            "do_parameterize_p_b": False,
+            "do_parameterize_p_b": False, ### TODO: should be true?
             "epsilon": None,
             "bootstrap_own_reward": False,
             },
@@ -113,9 +112,9 @@ def train():
 
     trial = SEHFragTrainer(hps)
     trial.print_every = 5
-    info_val = trial.run(use_wandb=True)
+    info_val = trial.run()
 
-sweep_id = wandb.sweep(sweep_config, project="pytorch-sweeps-demo")
+sweep_id = wandb.sweep(sweep_config, project=sweep_name)
 
 wandb.agent(sweep_id, train, count=count)
 
