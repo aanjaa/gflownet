@@ -22,4 +22,4 @@ class ReplayConfig:
     capacity: Optional[int] = None
     warmup: Optional[int] = None
     hindsight_ratio: float = 0
-    name: str = "beta_perc_from_top_alpha_perc_rewards" # "FIFO" 
+    sampling_strategy: str = "weighted" #"beta_perc_from_top_alpha_perc_rewards" 

@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from gflownet.config import Config
+from scipy.special import softmax
 
 
 class ReplayBuffer(object):
@@ -15,7 +16,7 @@ class ReplayBuffer(object):
         self.buffer: List[tuple] = []
         self.position = 0
         self.rng = rng
-        self.name = cfg.replay.name
+        self.sampling_strategy = cfg.replay.sampling_strategy
 
     def push(self, *args): 
         #args: trajs, log_rewards, flat_rewards, cond_info, is_valid
@@ -29,9 +30,15 @@ class ReplayBuffer(object):
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
-        if self.name == "FIFO":
+        if self.sampling_strategy == "uniform":
             idxs = self.rng.choice(len(self.buffer), batch_size)
-        elif self.name == "beta_perc_from_top_alpha_perc_rewards":
+            
+        elif self.sampling_strategy == "weighted":
+            rewards = torch.tensor([x[2] for x in self.buffer])
+            p = softmax(rewards,axis=0)
+            idxs = self.rng.choice(len(self.buffer), batch_size,p=p)
+
+        elif self.sampling_strategy == "beta_perc_from_top_alpha_perc_rewards":
             beta = 0.5 
             alpha = 0.1 
             batch_size_top = int(batch_size*beta)
@@ -40,9 +47,8 @@ class ReplayBuffer(object):
             # Sample some of the batch regularly
             idxs_all = self.rng.choice(len(self.buffer), int(batch_size/2))
             # Sample the rest from top 10% of the reward
-            rewards = [x[2] for x in self.buffer]
-            rewards = torch.tensor(rewards)
-            values,indices = torch.topk(rewards,k)
+            rewards = torch.tensor([x[2] for x in self.buffer])
+            _,indices = torch.topk(rewards,k)
             idxs_top = self.rng.choice(indices, batch_size-int(batch_size/2))
             # Concatenate the two
             idxs = np.concatenate((idxs_all,idxs_top))
