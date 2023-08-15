@@ -280,7 +280,7 @@ class SamplingIterator(IterableDataset):
                 # push the online trajectories in the replay buffer and sample a new 'online' batch
                 for i in range(num_offline, len(trajs)):
                     self.replay_buffer.push(
-                        deepcopy(trajs[i]),
+                        deepcopy(trajs[i]),                                                               
                         deepcopy(log_rewards[i]),
                         deepcopy(flat_rewards[i]),
                         deepcopy(cond_info[i]),

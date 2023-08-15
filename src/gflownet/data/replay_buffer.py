@@ -15,6 +15,7 @@ class ReplayBuffer(object):
         self.buffer: List[tuple] = []
         self.position = 0
         self.rng = rng
+        self.name = cfg.replay.name
 
     def push(self, *args):
         if len(self.buffer) == 0:

@@ -147,6 +147,9 @@ def main():
             "dist_params": [0, 64.0],
             }
         },
+    "replay":{
+        "use": True
+        }
     }
 
     if os.path.exists(hps["log_dir"]):

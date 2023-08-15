@@ -22,3 +22,4 @@ class ReplayConfig:
     capacity: Optional[int] = None
     warmup: Optional[int] = None
     hindsight_ratio: float = 0
+    name: str = "FIFO"
