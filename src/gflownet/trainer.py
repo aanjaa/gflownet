@@ -124,7 +124,11 @@ class GFNTrainer:
         # The final config is obtained by merging the three sources
         # NEW: option to get configs from wandb sweeps
         self.cfg: Config = OmegaConf.structured(Config())
-        self.cfg = self.setup_config(hps)
+        self.set_default_hps(self.cfg)
+        # OmegaConf returns a fancy object but we can still pretend it's a Config instance
+        self.cfg = OmegaConf.merge(self.cfg, hps)  # type: ignore
+        #self.cfg = self.setup_config(hps)
+
         self.device = torch.device(self.cfg.device)
         # Print the loss every `self.print_every` iterations
         self.print_every = self.cfg.print_every
@@ -136,11 +140,7 @@ class GFNTrainer:
 
         self.setup()
 
-    def setup_config(self,hps):
-        self.set_default_hps(self.cfg)
-        # OmegaConf returns a fancy object but we can still pretend it's a Config instance
-        self.cfg = OmegaConf.merge(self.cfg, hps)  # type: ignore
-        
+    def setup_config(self,hps):        
         # Params we hyperoptimize over
         wandb_config = {
             "learning_rate":self.cfg.opt.learning_rate, 
@@ -391,7 +391,7 @@ class GFNTrainer:
                 pass
             logger.info("Final generation steps completed.")
 
-        wandb.finish()
+        #wandb.finish()
         return info_val
 
     def _save_state(self, it):

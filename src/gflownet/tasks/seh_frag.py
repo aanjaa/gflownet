@@ -126,31 +126,51 @@ class SEHFragTrainer(StandardOnlineTrainer):
         self.ctx = FragMolBuildingEnvContext(max_frags=self.cfg.algo.max_nodes, num_cond_dim=self.task.num_cond_dim)
 
 
-def main():
-    hps = {
-    "log_dir": "./logs/debug_run_seh_frag",
-    "experiment_name": "debug_run_seh_frag",
-    "device": "cuda"  if torch.cuda.is_available() else "cpu",
-    "overwrite_existing_exp": True,
-    "num_training_steps": 100, #10_000,
-    "validate_every":100,
-    "num_workers": 1,
-    "opt": {
-        "lr_decay": 20_000,
-        },
-    "algo": {
-        "sampling_tau": 0.99,
-        },
-    "cond": {
-        "temperature": {
-            "sample_dist": "uniform",
-            "dist_params": [0, 64.0],
-            }
-        },
-    "replay":{
-        "use": True
-        }
-    }
+# def main():
+#     hps = {
+#     "log_dir": "./logs/debug_run_seh_frag",
+#     "experiment_name": "debug_run_seh_frag",
+#     "device": "cuda"  if torch.cuda.is_available() else "cpu",
+#     "overwrite_existing_exp": True,
+#     "num_training_steps": 100, #10_000,
+#     "validate_every":100,
+#     "num_workers": 1,
+#     "opt": {
+#         "lr_decay": 20_000,
+#         },
+#     "algo": {
+#         "sampling_tau": 0.99,
+#         },
+#     "cond": {
+#         "temperature": {
+#             "sample_dist": "uniform",
+#             "dist_params": [0, 64.0],
+#             }
+#         },
+#     "replay":{
+#         "use": True
+#         }
+#     }
+
+#     if os.path.exists(hps["log_dir"]):
+#         if hps["overwrite_existing_exp"]:
+#             shutil.rmtree(hps["log_dir"])
+#         else:
+#             raise ValueError(f"Log dir {hps['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
+#     os.makedirs(hps["log_dir"])
+
+#     trial = SEHFragTrainer(hps)
+#     trial.print_every = 5
+#     info_val = trial.run()
+
+
+# if __name__ == "__main__":
+#     main()
+
+
+#RAYTUNE VERSION
+def main(hps):
+    """Example of how this model can be run outside of Determined"""
 
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
@@ -162,49 +182,29 @@ def main():
     trial = SEHFragTrainer(hps)
     trial.print_every = 5
     info_val = trial.run()
+    return info_val
 
 
 if __name__ == "__main__":
-    main()
 
-
-# RAYTUNE VERSION
-# def main(hps,use_wandb=True):
-#     """Example of how this model can be run outside of Determined"""
-
-#     if os.path.exists(hps["log_dir"]):
-#         if hps["overwrite_existing_exp"]:
-#             shutil.rmtree(hps["log_dir"])
-#         else:
-#             raise ValueError(f"Log dir {hps['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
-#     os.makedirs(hps["log_dir"])
-
-#     trial = SEHFragTrainer(hps)
-#     trial.print_every = 5
-#     info_val = trial.run(use_wandb=use_wandb)
-#     return info_val
-
-
-# if __name__ == "__main__":
-
-#     hps = {
-#     "log_dir": "./logs/debug_run_seh_frag",
-#     "device": "cpu",#"cuda"  if torch.cuda.is_available() else "cpu",
-#     "overwrite_existing_exp": True,
-#     "num_training_steps": 1000, #10_000,
-#     "validate_every":100,
-#     "num_workers": 1,
-#     "opt": {
-#         "lr_decay": 20000,
-#         },
-#     "algo": {
-#         "sampling_tau": 0.99,
-#         },
-#     "cond": {
-#         "temperature": {
-#             "sample_dist": "uniform",
-#             "dist_params": [0, 64.0],
-#             }
-#         },
-#     }
-#     info_val = main(hps,use_wandb=True)
+    hps = {
+    "log_dir": "./logs/debug_run_seh_frag",
+    "device": "cpu",#"cuda"  if torch.cuda.is_available() else "cpu",
+    "overwrite_existing_exp": True,
+    "num_training_steps": 1000, #10_000,
+    "validate_every":100,
+    "num_workers": 1,
+    "opt": {
+        "lr_decay": 20000,
+        },
+    "algo": {
+        "sampling_tau": 0.99,
+        },
+    "cond": {
+        "temperature": {
+            "sample_dist": "uniform",
+            "dist_params": [0, 64.0],
+            }
+        },
+    }
+    info_val = main(hps)

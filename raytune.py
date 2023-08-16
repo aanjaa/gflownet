@@ -8,11 +8,14 @@ from ray import air, tune
 from ray.tune.search.basic_variant import BasicVariantGenerator
 
 from gflownet.tasks.seh_frag import main
+from pathlib import Path
 
 from argparse import ArgumentParser
 import time
 import torch
 import ray
+
+_SLURM_JOB_CPUS_FILENAME = '/sys/fs/cgroup/cpuset/slurm/uid_%s/job_%s/cpuset.cpus'
 
 def replace_dict_key(dictionary, key, value):
     keys = key.split(".")
@@ -50,6 +53,40 @@ def change_config(config,changes_config):
     for key, value in changes_config.items():
         config = replace_dict_key(config, key, value)
     return config
+
+
+def get_num_cpus() -> int:
+    '''
+    In a typical slurm allocation we only have access to a subset of the
+    current node's CPUs.  Allocating ray with more CPUs than we actually
+    have naturally leads to massive slowdowns in code performance, so
+    we should avoid this.
+
+    For any job allocation, Slurm writes a file to /sys listing the
+    CPUs on the node which belong to the allocation.  If the code is
+    being run on a slurm allocation this function reads the slurm CPU file
+    and returns the number of CPUs allocated for the job.  If not on a slurm
+    allocation, ray is initialized by default with the number of CPUs available
+    on the system.
+    '''
+    if 'SLURM_JOB_ID' not in os.environ:
+        return os.cpu_count()
+
+    uid, slurm_job_id = os.getuid(), os.environ['SLURM_JOB_ID']
+    fname = Path(_SLURM_JOB_CPUS_FILENAME % (uid, slurm_job_id))
+
+    num_cpus = 0
+    with open(fname, 'r') as f:
+        line = f.read().replace('\n', '')
+        for substr in line.split(','):
+            if '-' not in substr:
+                num_cpus += 1
+                continue
+
+            cpu_nums = list(map(int, substr.split('-')))
+            num_cpus += cpu_nums[1] - cpu_nums[0] + 1
+
+    return num_cpus
 
 
 
@@ -91,6 +128,7 @@ if __name__ == "__main__":
 
     search_space = {
     "log_dir": "./logs/debug_run_seh_frag",
+    "experiment_name": "debug_run_seh_frag",
     "device": "cpu",#"cuda" if torch.cuda.is_available() else "cpu",
     "seed": 0, # TODO: how is seed handled?
     "validate_every": 1000,
@@ -158,8 +196,8 @@ if __name__ == "__main__":
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
     tuner = tune.Tuner(
-        tune.with_resources(functools.partial(main, use_wandb=False), {"cpu": 1.0, "gpu": 1.0}),
-        #functools.partial(main, use_wandb=False),
+        #tune.with_resources(main, {"cpu": 1.0, "gpu": 1.0}),
+        main,
         param_space=search_space,
         tune_config=tune.TuneConfig(
             metric=metric,
@@ -173,7 +211,10 @@ if __name__ == "__main__":
         run_config=air.RunConfig(name="details", verbose=2,local_dir=search_space["log_dir"], log_to_file=False)
     )
     
-    ray.init()
+    ray.init(
+        num_cpus=get_num_cpus(),
+        num_gpus=torch.cuda.device_count(),
+    )
 
     results = tuner.fit()
 
