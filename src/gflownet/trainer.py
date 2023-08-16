@@ -127,7 +127,7 @@ class GFNTrainer:
         self.set_default_hps(self.cfg)
         # OmegaConf returns a fancy object but we can still pretend it's a Config instance
         self.cfg = OmegaConf.merge(self.cfg, hps)  # type: ignore
-        #self.cfg = self.setup_config(hps)
+        #self.cfg = self.setup_sweep_config(hps) #For doing wandb sweeps
 
         self.device = torch.device(self.cfg.device)
         # Print the loss every `self.print_every` iterations
@@ -140,7 +140,7 @@ class GFNTrainer:
 
         self.setup()
 
-    def setup_config(self,hps):        
+    def setup_sweep_config(self,hps):        
         # Params we hyperoptimize over
         wandb_config = {
             "learning_rate":self.cfg.opt.learning_rate, 

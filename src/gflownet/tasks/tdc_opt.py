@@ -1,6 +1,10 @@
 import ast
 import copy
 from typing import Any, Callable, Dict, List, Tuple, Union
+import os
+import shutil
+import wandb
+from gflownet.utils.logging import prepend_keys
 
 import numpy as np
 from rdkit import RDLogger
@@ -215,16 +219,76 @@ class TDCFragTrainer(StandardOnlineTrainer):
     #         for a, b in zip(self.model.parameters(), self.sampling_model.parameters()):
     #             b.data.mul_(self.sampling_tau).add_(a.data * (1 - self.sampling_tau))
 
+## STANDARD VERSION
+# def main():
+#     """Example of how this model can be run outside of Determined"""
+#     hps = {
+#         "log_dir": "./logs/debug_run_seh_frag",
+#         "experiment_name": "debug_run_seh_frag",
+#         "device": "cuda"  if torch.cuda.is_available() else "cpu",
+#         "overwrite_existing_exp": True,
+#         "num_training_steps": 10, #10_000,
+#         "validate_every": 10,
+#         "num_workers": 1,
+#         "opt": {
+#             "lr_decay": 20_000,
+#             },
+#         "algo": {
+#             "sampling_tau": 0.99,
+#             },
+#         "cond": {
+#             "temperature": {
+#                 "sample_dist": "uniform",
+#                 "dist_params": [0, 64.0],
+#                 }
+#             },
+#         "task": {
+#             "tdc": {
+#                 "oracle_name": "mestranol_similarity",
+#                 }
+#             },
+#         }
+    
+#     trial = TDCFragTrainer(hps)
+#     trial.print_every = 5
+#     info_val = trial.run()
 
-def main():
-    """Example of how this model can be run outside of Determined"""
+
+# if __name__ == '__main__':
+#     main()
+
+
+
+#RAYTUNE VERSION
+def main(hps,use_wandb=False):
+    if use_wandb:
+        wandb.init(project="gflownet",name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
+
+    if os.path.exists(hps["log_dir"]):
+        if hps["overwrite_existing_exp"]:
+            shutil.rmtree(hps["log_dir"])
+        else:
+            raise ValueError(f"Log dir {hps['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
+    os.makedirs(hps["log_dir"])
+
+    trial = TDCFragTrainer(hps)
+    info_val = trial.run()
+    if use_wandb:
+        #wandb.log(prepend_keys(info_val,"final"))
+        wandb.finish()
+    return info_val
+
+
+
+if __name__ == "__main__":
+
     hps = {
-        "log_dir": "./logs/debug_run_seh_frag",
-        "experiment_name": "debug_run_seh_frag",
+        "log_dir": "./logs/debug_tdc_opt_frag",
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
         "num_training_steps": 10, #10_000,
-        "validate_every": 10,
+        "print_every": 10,
+        "validate_every":10,
         "num_workers": 1,
         "opt": {
             "lr_decay": 20_000,
@@ -244,11 +308,4 @@ def main():
                 }
             },
         }
-    
-    trial = TDCFragTrainer(hps)
-    trial.print_every = 5
-    info_val = trial.run()
-
-
-if __name__ == '__main__':
-    main()
+    info_val = main(hps,use_wandb = True)

@@ -7,7 +7,6 @@ import shutil
 from ray import air, tune
 from ray.tune.search.basic_variant import BasicVariantGenerator
 
-from gflownet.tasks.seh_frag import main
 from pathlib import Path
 
 from argparse import ArgumentParser
@@ -89,6 +88,25 @@ def get_num_cpus() -> int:
     return num_cpus
 
 
+def get_placement_group_factory():
+    num_cpu_actors = 3
+    num_gpu_actors = 1
+    num_cpu_per_trial = 1
+    num_gpu_per_trial = 1
+
+    cpu_per_actor = num_cpu_per_trial / (num_cpu_actors + 1)
+    gpu_per_actor = num_gpu_per_trial / (num_gpu_actors + 1)
+
+    gpu_actor_resource_reqs = [
+        {'CPU': cpu_per_actor, 'GPU': gpu_per_actor}
+        for _ in range(num_gpu_actors + 1)
+    ]
+
+    return tune.PlacementGroupFactory(
+        gpu_actor_resource_reqs
+    )
+
+
 
 if __name__ == "__main__":
 
@@ -99,11 +117,30 @@ if __name__ == "__main__":
     # args = parser.parse_args()
 
     #folder_name = args.folder
-    training_objective = "TB" #"TB" "FM" "SubTB"
+
+    TASKS = ['seh', 'jnk3', 'gsk3b', 'celecoxib_rediscovery',
+    'troglitazone_rediscovery',
+    'thiothixene_rediscovery', 'albuterol_similarity', 'mestranol_similarity',
+    'isomers_c7h8n2o2', 'isomers_c9h10n2o2pf2cl', 'median1', 'median2', 'osimertinib_mpo',
+    'fexofenadine_mpo', 'ranolazine_mpo', 'perindopril_mpo', 'amlodipine_mpo',
+    'sitagliptin_mpo', 'zaleplon_mpo', 'valsartan_smarts', 'deco_hop', 'scaffold_hop', 'qed', 'drd2']
+    TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
+
+
+    training_objective = "TB"
+    task = "qed"
     replay_use = False
 
+    num_samples = 6
 
     metric = "val_loss"
+
+    if task == "seh":
+        from gflownet.tasks.seh_frag import main
+        oracle_name = "qed" #dummy
+    else:
+        from gflownet.tasks.tdc_opt import main
+        oracle_name = task
 
 
     if training_objective == "TB":
@@ -117,9 +154,6 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Training objective {training_objective} not supported")
 
-    num_samples = 3
-
-    method = "TB" 
 
     learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4,3e-5,1e-5])
     lr_decay = tune.choice([20_000,10_000,1_000])
@@ -128,12 +162,11 @@ if __name__ == "__main__":
 
     search_space = {
     "log_dir": "./logs/debug_run_seh_frag",
-    "experiment_name": "debug_run_seh_frag",
-    "device": "cpu",#"cuda" if torch.cuda.is_available() else "cpu",
+    "device": "cuda" if torch.cuda.is_available() else "cpu",
     "seed": 0, # TODO: how is seed handled?
-    "validate_every": 1000,
-    "print_every": 100,
-    "num_training_steps": 10_000,
+    "validate_every": 20,#1000,
+    "print_every": 10,
+    "num_training_steps": 20,#10_000,
     "num_workers": 1,
     "overwrite_existing_exp": True,
     "algo": {
@@ -181,6 +214,11 @@ if __name__ == "__main__":
             "dist_params": [0, 64.0],
             }
         },
+    "task": {
+        "tdc": {
+            "oracle_name": oracle_name,
+            }
+        },
     }
 
     if os.path.exists(search_space["log_dir"]):
@@ -195,9 +233,17 @@ if __name__ == "__main__":
         json.dump(search_space, fp, sort_keys=True, indent=4, skipkeys=True,
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
+    group_factory = tune.PlacementGroupFactory([
+        {'CPU': 1.0, 'GPU': 0.5}
+        for _ in range(2)
+    ])
+    #group_factory = get_placement_group_factory()
+    print(group_factory)
     tuner = tune.Tuner(
-        #tune.with_resources(main, {"cpu": 1.0, "gpu": 1.0}),
-        main,
+        tune.with_resources(
+            functools.partial(main,use_wandb=True),
+            resources=group_factory),
+        #main,
         param_space=search_space,
         tune_config=tune.TuneConfig(
             metric=metric,
@@ -208,13 +254,14 @@ if __name__ == "__main__":
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
             # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
         ),
-        run_config=air.RunConfig(name="details", verbose=2,local_dir=search_space["log_dir"], log_to_file=False)
+        run_config=air.RunConfig(name="details", verbose=1,local_dir=search_space["log_dir"], log_to_file=False)
     )
     
     ray.init(
         num_cpus=get_num_cpus(),
         num_gpus=torch.cuda.device_count(),
     )
+    #ray.init()
 
     results = tuner.fit()
 

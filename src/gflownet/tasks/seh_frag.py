@@ -2,6 +2,8 @@ import os
 import shutil
 import socket
 from typing import Callable, Dict, List, Tuple, Union
+import wandb
+from gflownet.utils.logging import prepend_keys
 
 import numpy as np
 import torch
@@ -169,8 +171,9 @@ class SEHFragTrainer(StandardOnlineTrainer):
 
 
 #RAYTUNE VERSION
-def main(hps):
-    """Example of how this model can be run outside of Determined"""
+def main(hps,use_wandb=False):
+    if use_wandb:
+        wandb.init(project="gflownet",name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
 
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
@@ -180,8 +183,11 @@ def main(hps):
     os.makedirs(hps["log_dir"])
 
     trial = SEHFragTrainer(hps)
-    trial.print_every = 5
     info_val = trial.run()
+    if use_wandb:
+        #wandb.log(prepend_keys(info_val,"final"))
+        wandb.finish()
+    
     return info_val
 
 
@@ -189,10 +195,11 @@ if __name__ == "__main__":
 
     hps = {
     "log_dir": "./logs/debug_run_seh_frag",
-    "device": "cpu",#"cuda"  if torch.cuda.is_available() else "cpu",
+    "device": "cuda"  if torch.cuda.is_available() else "cpu",
     "overwrite_existing_exp": True,
-    "num_training_steps": 1000, #10_000,
-    "validate_every":100,
+    "num_training_steps": 20, #10_000,
+    "print_every": 10,
+    "validate_every":20,
     "num_workers": 1,
     "opt": {
         "lr_decay": 20000,
@@ -207,4 +214,4 @@ if __name__ == "__main__":
             }
         },
     }
-    info_val = main(hps)
+    info_val = main(hps,use_wandb= True)
