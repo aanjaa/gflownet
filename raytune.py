@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
     #folder_name = args.folder
     num_cpus = get_num_cpus()
-    num_gpus = torch.cuda.device_count()
+    num_gpus = 1#torch.cuda.device_count()
 
     ray.init(
         num_cpus=num_cpus,
@@ -187,9 +187,12 @@ if __name__ == "__main__":
     CPU = num_cpus
     GPU = float(torch.cuda.is_available())
     num_workers = num_cpus
-    num_samples = 2
 
-    TASKS = ['seh', 'jnk3', 'gsk3b', 'celecoxib_rediscovery',
+    num_samples = 25
+    num_training_steps = 10_000
+    validate_every = 1000
+
+    TASKS = ['seh', 'gsk3b', 'celecoxib_rediscovery',
     'troglitazone_rediscovery',
     'thiothixene_rediscovery', 'albuterol_similarity', 'mestranol_similarity',
     'isomers_c7h8n2o2', 'isomers_c9h10n2o2pf2cl', 'median1', 'median2', 'osimertinib_mpo',
@@ -212,9 +215,9 @@ if __name__ == "__main__":
         "log_dir": f"./logs/raytune",
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "seed": 0, # TODO: how is seed handled?
-        "validate_every": 1,#1000,
-        "print_every": 1,
-        "num_training_steps": 1,#10_000,
+        "validate_every": validate_every,#1000,
+        "print_every": 10,
+        "num_training_steps": num_training_steps,#10_000,
         "num_workers": num_workers,
         "overwrite_existing_exp": True,
         "algo": {
@@ -301,7 +304,7 @@ if __name__ == "__main__":
     search_spaces = []
     experiment_name = "training_objectives"
 
-    for task in ['seh','albuterol_similarity', 'qed']:
+    for task in ['seh','qed','albuterol_similarity','gsk3b', 'celecoxib_rediscovery']:
         for training_objective in TRAINING_OBJECTIVES:
 
             name = f"{task}_{training_objective}"
