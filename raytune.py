@@ -101,7 +101,7 @@ def run_raytune(main,search_space,metric,num_samples,experiment_name,name):
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
     group_factory = tune.PlacementGroupFactory([
-        {'CPU': CPU, 'GPU': CPU} #for _ in range(2)
+        {'CPU': CPU, 'GPU': GPU} #for _ in range(2)
     ])
 
     # Save the search space by saving this file itself
