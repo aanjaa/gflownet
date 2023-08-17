@@ -47,12 +47,10 @@ def convert_str_to_bool(args_obj, args_to_convert):
         setattr(args_obj, arg, bool_value)
     return args_obj
 
-
 def change_config(config,changes_config):
     for key, value in changes_config.items():
         config = replace_dict_key(config, key, value)
     return config
-
 
 def get_num_cpus() -> int:
     '''
@@ -87,145 +85,14 @@ def get_num_cpus() -> int:
 
     return num_cpus
 
-
-def get_placement_group_factory():
-    num_cpu_actors = 3
-    num_gpu_actors = 1
-    num_cpu_per_trial = 1
-    num_gpu_per_trial = 1
-
-    cpu_per_actor = num_cpu_per_trial / (num_cpu_actors + 1)
-    gpu_per_actor = num_gpu_per_trial / (num_gpu_actors + 1)
-
-    gpu_actor_resource_reqs = [
-        {'CPU': cpu_per_actor, 'GPU': gpu_per_actor}
-        for _ in range(num_gpu_actors + 1)
-    ]
-
-    return tune.PlacementGroupFactory(
-        gpu_actor_resource_reqs
-    )
-
-
-
-if __name__ == "__main__":
-
-    # parser = ArgumentParser()
-    # parser.add_argument("--experiment_name", type=str,
-    #                     default="searchspaces_losses") #["reward_losses", "smoothness_losses", ["searchspaces_losses"], ["replay_and_capacity"], ["exploration_strategies"]][-3]
-    # parser.add_argument("--folder", type=str, default="logs_debug")
-    # args = parser.parse_args()
-
-    #folder_name = args.folder
-
-    TASKS = ['seh', 'jnk3', 'gsk3b', 'celecoxib_rediscovery',
-    'troglitazone_rediscovery',
-    'thiothixene_rediscovery', 'albuterol_similarity', 'mestranol_similarity',
-    'isomers_c7h8n2o2', 'isomers_c9h10n2o2pf2cl', 'median1', 'median2', 'osimertinib_mpo',
-    'fexofenadine_mpo', 'ranolazine_mpo', 'perindopril_mpo', 'amlodipine_mpo',
-    'sitagliptin_mpo', 'zaleplon_mpo', 'valsartan_smarts', 'deco_hop', 'scaffold_hop', 'qed', 'drd2']
-    TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
-
-
-    training_objective = "TB"
-    task = "qed"
-    replay_use = False
-
-    num_samples = 6
-
-    metric = "val_loss"
-
-    if task == "seh":
-        from gflownet.tasks.seh_frag import main
-        oracle_name = "qed" #dummy
-    else:
-        from gflownet.tasks.tdc_opt import main
-        oracle_name = task
-
-
-    if training_objective == "TB":
-        method = "TB"
-        do_subtb = False
-    elif training_objective == "FM":
-        method = "FM"
-    elif training_objective == "SubTB":
-        method = "TB"
-        do_subtb = True
-    else:
-        raise ValueError(f"Training objective {training_objective} not supported")
-
-
-    learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4,3e-5,1e-5])
-    lr_decay = tune.choice([20_000,10_000,1_000])
-    Z_learning_rate = tune.choice([3e-1,1e-1,3e-2,1e-2,3e-3,1e-3,3e-4,1e-4])
-    Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000])
-
-    search_space = {
-    "log_dir": "./logs/debug_run_seh_frag",
-    "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "seed": 0, # TODO: how is seed handled?
-    "validate_every": 20,#1000,
-    "print_every": 10,
-    "num_training_steps": 20,#10_000,
-    "num_workers": 1,
-    "overwrite_existing_exp": True,
-    "algo": {
-        "method": method,
-        "sampling_tau": 0.9,
-        "global_batch_size": 64,
-        "offline_ratio": 0.0,
-        "valid_offline_ratio": 0.0,
-        "max_nodes": 9,
-        "illegal_action_logreward": -75,
-        "train_random_action_prob": 0.0,
-        "valid_random_action_prob": 0.0,
-        "tb": {
-            "do_subtb": do_subtb,
-            "Z_learning_rate": Z_learning_rate,
-            "Z_lr_decay": Z_lr_decay,
-            "do_parameterize_p_b": False,
-            "epsilon": None,
-            "bootstrap_own_reward": False,
-            },
-        },
-    "model": {
-        "num_layers": 4,
-        "num_emb": 128,
-        },
-    "opt": {
-        "opt": "adam",
-        "learning_rate": learning_rate,
-        "lr_decay": lr_decay,
-        "weight_decay": 1e-8,
-        "momentum": 0.9,
-        "clip_grad_type": "norm",
-        "clip_grad_param": 10,
-        "adam_eps": 1e-8,
-        },
-    "replay": {
-        "use": replay_use,
-        "capacity": 10_000,
-        "warmup": 1_000,
-        "hindsight_ratio": 0.0,
-        },
-    "cond": {
-        "temperature": {
-            "sample_dist": "uniform",
-            "dist_params": [0, 64.0],
-            }
-        },
-    "task": {
-        "tdc": {
-            "oracle_name": oracle_name,
-            }
-        },
-    }
+def run_raytune(main,search_space,metric,num_samples,experiment_name,name):
 
     if os.path.exists(search_space["log_dir"]):
         if search_space["overwrite_existing_exp"]:
             shutil.rmtree(search_space["log_dir"])
         else:
             raise ValueError(f"Log dir {search_space['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
+        
     os.makedirs(search_space["log_dir"])
 
     # Save the search space
@@ -234,9 +101,12 @@ if __name__ == "__main__":
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
     group_factory = tune.PlacementGroupFactory([
-        {'CPU': 1.0, 'GPU': 0.5}
-        for _ in range(2)
+        {'CPU': CPU, 'GPU': CPU} #for _ in range(2)
     ])
+
+    # Save the search space by saving this file itself
+    shutil.copy(__file__, os.path.join(search_space["log_dir"] + "/ray.py"))
+
     #group_factory = get_placement_group_factory()
     print(group_factory)
     tuner = tune.Tuner(
@@ -257,13 +127,20 @@ if __name__ == "__main__":
         run_config=air.RunConfig(name="details", verbose=1,local_dir=search_space["log_dir"], log_to_file=False)
     )
     
-    ray.init(
-        num_cpus=get_num_cpus(),
-        num_gpus=torch.cuda.device_count(),
-    )
     #ray.init()
+    
+    # Start timing 
+    start = time.time()
 
     results = tuner.fit()
+
+    # Stop timing
+    end = time.time()
+    print(f"Time elapsed: {end - start}")
+
+    # Get a DataFrame with the results and save it to a CSV file
+    df = results.get_dataframe()
+    df.to_csv(os.path.join(search_space["log_dir"] + "/" + 'dataframe.csv'), index=False)
 
     # Generate txt files
     if results.errors:
@@ -288,3 +165,166 @@ if __name__ == "__main__":
     with open(os.path.join(search_space["log_dir"] + "/best_config.json"), 'w') as file:
         json.dump(config, file, sort_keys=True, indent=4, skipkeys=True,
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
+
+
+if __name__ == "__main__":
+
+    # parser = ArgumentParser()
+    # parser.add_argument("--experiment_name", type=str,
+    #                     default="searchspaces_losses") #["reward_losses", "smoothness_losses", ["searchspaces_losses"], ["replay_and_capacity"], ["exploration_strategies"]][-3]
+    # parser.add_argument("--folder", type=str, default="logs_debug")
+    # args = parser.parse_args()
+
+    #folder_name = args.folder
+    num_cpus = get_num_cpus()
+    num_gpus = torch.cuda.device_count()
+
+    ray.init(
+        num_cpus=num_cpus,
+        num_gpus=num_gpus,
+    )
+
+    CPU = num_cpus
+    GPU = float(torch.cuda.is_available())
+    num_workers = num_cpus
+    num_samples = 2
+
+    TASKS = ['seh', 'jnk3', 'gsk3b', 'celecoxib_rediscovery',
+    'troglitazone_rediscovery',
+    'thiothixene_rediscovery', 'albuterol_similarity', 'mestranol_similarity',
+    'isomers_c7h8n2o2', 'isomers_c9h10n2o2pf2cl', 'median1', 'median2', 'osimertinib_mpo',
+    'fexofenadine_mpo', 'ranolazine_mpo', 'perindopril_mpo', 'amlodipine_mpo',
+    'sitagliptin_mpo', 'zaleplon_mpo', 'valsartan_smarts', 'deco_hop', 'scaffold_hop', 'qed', 'drd2']
+    
+    TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
+
+    #training_objective = "TB"
+    #task = "seh"
+
+    #experiment_name = "seh_compare_training_objectives"
+    #name = training_objective
+
+
+    metric = "val_loss"
+
+
+    config = {
+        "log_dir": f"./logs/raytune",
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "seed": 0, # TODO: how is seed handled?
+        "validate_every": 1,#1000,
+        "print_every": 1,
+        "num_training_steps": 1,#10_000,
+        "num_workers": num_workers,
+        "overwrite_existing_exp": True,
+        "algo": {
+            "method": "TB",
+            "sampling_tau": 0.9,
+            "global_batch_size": 64,
+            "offline_ratio": 0.0,
+            "valid_offline_ratio": 0.0,
+            "max_nodes": 9,
+            "illegal_action_logreward": -75,
+            "train_random_action_prob": 0.0,
+            "valid_random_action_prob": 0.0,
+            "tb": {
+                "do_subtb": False,
+                "Z_learning_rate": 1e-3,
+                "Z_lr_decay": 50_000,
+                "do_parameterize_p_b": False,
+                "epsilon": None,
+                "bootstrap_own_reward": False,
+                },
+            },
+        "model": {
+            "num_layers": 4,
+            "num_emb": 128,
+            },
+        "opt": {
+            "opt": "adam",
+            "learning_rate": 1e-4,
+            "lr_decay": 20_000,
+            "weight_decay": 1e-8,
+            "momentum": 0.9,
+            "clip_grad_type": "norm",
+            "clip_grad_param": 10,
+            "adam_eps": 1e-8,
+            },
+        "replay": {
+            "use": False,
+            "capacity": 10_000,
+            "warmup": 1_000,
+            "hindsight_ratio": 0.0,
+            },
+        "cond": {
+            "temperature": {
+                "sample_dist": "uniform",
+                "dist_params": [0, 64.0],
+                }
+            },
+        "task": {
+            "tdc": {
+                "oracle_name": "qed",
+                }
+            },
+        }
+    
+    def convert_task_and_training_obj(task,training_objective):
+        if task == "seh":
+            from gflownet.tasks.seh_frag import main
+            oracle_name = "" #dummy
+        else:
+            from gflownet.tasks.tdc_opt import main
+            oracle_name = task
+
+
+        if training_objective == "TB":
+            method = "TB"
+            do_subtb = False
+        elif training_objective == "FM":
+            method = "FM"
+            do_subtb = False
+        elif training_objective == "SubTB":
+            method = "TB"
+            do_subtb = True
+        else:
+            raise ValueError(f"Training objective {training_objective} not supported")
+        return main, task, oracle_name,method, do_subtb
+
+
+    learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4,3e-5,1e-5])
+    lr_decay = tune.choice([20_000,10_000,1_000])
+    Z_learning_rate = tune.choice([3e-1,1e-1,3e-2,1e-2,3e-3,1e-3,3e-4,1e-4])
+    Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000])
+
+
+    search_spaces = []
+    experiment_name = "training_objectives"
+
+    for task in ['seh','albuterol_similarity', 'qed']:
+        for training_objective in TRAINING_OBJECTIVES:
+
+            name = f"{task}_{training_objective}"
+
+            main, task, oracle_name,method,do_subtb = convert_task_and_training_obj(task,training_objective)
+            
+            replay_use = False
+
+            changes_config = {
+                "log_dir": f"./logs/{experiment_name}/{name}",
+                "opt.lr_decay": lr_decay,
+                "opt.learning_rate": learning_rate,
+                "algo.tb.Z_learning_rate": Z_learning_rate,
+                "algo.tb.Z_lr_decay": Z_lr_decay,
+                "algo.method": method,
+                "algo.tb.do_subtb": do_subtb,
+                "replay.use": replay_use,
+                "task.tdc.oracle_name": oracle_name,
+                }
+            
+            search_space = change_config(copy.deepcopy(config), changes_config)
+            try:
+                run_raytune(main,search_space,metric,num_samples,experiment_name,name)
+            except:
+                continue
+            

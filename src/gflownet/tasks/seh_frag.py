@@ -205,6 +205,7 @@ if __name__ == "__main__":
         "lr_decay": 20000,
         },
     "algo": {
+        "method": "FM",
         "sampling_tau": 0.99,
         },
     "cond": {
@@ -214,4 +215,4 @@ if __name__ == "__main__":
             }
         },
     }
-    info_val = main(hps,use_wandb= True)
+    info_val = main(hps,use_wandb= False)
