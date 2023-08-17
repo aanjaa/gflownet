@@ -6,6 +6,7 @@ import shutil
 
 from ray import air, tune
 from ray.tune.search.basic_variant import BasicVariantGenerator
+import multiprocessing
 
 from pathlib import Path
 
@@ -15,6 +16,87 @@ import torch
 import ray
 
 _SLURM_JOB_CPUS_FILENAME = '/sys/fs/cgroup/cpuset/slurm/uid_%s/job_%s/cpuset.cpus'
+
+
+def run_raytune(search_space,metric,num_samples):
+
+    if search_space["task"]["name"] == "seh":
+        from gflownet.tasks.seh_frag import main
+    else:
+        from gflownet.tasks.tdc_opt import main
+
+
+    if os.path.exists(search_space["log_dir"]):
+        if search_space["overwrite_existing_exp"]:
+            shutil.rmtree(search_space["log_dir"])
+        else:
+            raise ValueError(f"Log dir {search_space['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
+        
+    os.makedirs(search_space["log_dir"])
+
+    # Save the search space
+    with open(os.path.join(search_space["log_dir"] + "/" + time.strftime("%d.%m_%H:%M:%S") + ".json"), 'w') as fp:
+        json.dump(search_space, fp, sort_keys=True, indent=4, skipkeys=True,
+                    default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
+
+    # Save the search space by saving this file itself
+    shutil.copy(__file__, os.path.join(search_space["log_dir"] + "/ray.py"))
+
+    tuner = tune.Tuner(
+        # tune.with_resources(
+        #     functools.partial(main,use_wandb=True),
+        #     resources=group_factory),
+        functools.partial(main,use_wandb=True),
+        param_space=search_space,
+        tune_config=tune.TuneConfig(
+            metric=metric,
+            mode="min",
+            num_samples=num_samples,
+            # scheduler=tune.schedulers.ASHAScheduler(grace_period=10),
+            search_alg=BasicVariantGenerator(constant_grid_search=True),
+            # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
+            # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
+        ),
+        run_config=air.RunConfig(name="details", verbose=1,local_dir=search_space["log_dir"], log_to_file=False)
+    )
+    
+    # Start timing 
+    start = time.time()
+
+    results = tuner.fit()
+
+    # Stop timing
+    end = time.time()
+    print(f"Time elapsed: {end - start}")
+
+    # Get a DataFrame with the results and save it to a CSV file
+    df = results.get_dataframe()
+    df.to_csv(os.path.join(search_space["log_dir"] + "/" + 'dataframe.csv'), index=False)
+
+    # Generate txt files
+    if results.errors:
+        print("ERROR!")
+    else:
+        print("No errors!")
+    if results.errors:
+        with open(os.path.join(search_space["log_dir"], "error.txt"), 'w') as file:
+            file.write(f"Experiment failed for with errors {results.errors}")
+
+    with open(os.path.join(search_space["log_dir"] + "/summary.txt"), 'w') as file:
+        for i, result in enumerate(results):
+            if result.error:
+                file.write(f"Trial #{i} had an error: {result.error} \n")
+                continue
+
+            file.write(
+                f"Trial #{i} finished successfully with a {metric} metric of: {result.metrics[metric]} \n")
+
+
+    config = results.get_best_result().config
+    with open(os.path.join(search_space["log_dir"] + "/best_config.json"), 'w') as file:
+        json.dump(config, file, sort_keys=True, indent=4, skipkeys=True,
+                    default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
+
 
 def replace_dict_key(dictionary, key, value):
     keys = key.split(".")
@@ -85,86 +167,19 @@ def get_num_cpus() -> int:
 
     return num_cpus
 
-def run_raytune(main,search_space,metric,num_samples,experiment_name,name):
-
-    if os.path.exists(search_space["log_dir"]):
-        if search_space["overwrite_existing_exp"]:
-            shutil.rmtree(search_space["log_dir"])
-        else:
-            raise ValueError(f"Log dir {search_space['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
-        
-    os.makedirs(search_space["log_dir"])
-
-    # Save the search space
-    with open(os.path.join(search_space["log_dir"] + "/" + time.strftime("%d.%m_%H:%M:%S") + ".json"), 'w') as fp:
-        json.dump(search_space, fp, sort_keys=True, indent=4, skipkeys=True,
-                    default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
-
-    group_factory = tune.PlacementGroupFactory([
-        {'CPU': CPU, 'GPU': GPU} #for _ in range(2)
-    ])
-
-    # Save the search space by saving this file itself
-    shutil.copy(__file__, os.path.join(search_space["log_dir"] + "/ray.py"))
-
-    #group_factory = get_placement_group_factory()
-    print(group_factory)
-    tuner = tune.Tuner(
-        tune.with_resources(
-            functools.partial(main,use_wandb=True),
-            resources=group_factory),
-        #main,
-        param_space=search_space,
-        tune_config=tune.TuneConfig(
-            metric=metric,
-            mode="min",
-            num_samples=num_samples,
-            # scheduler=tune.schedulers.ASHAScheduler(grace_period=10),
-            search_alg=BasicVariantGenerator(constant_grid_search=True),
-            # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
-            # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
-        ),
-        run_config=air.RunConfig(name="details", verbose=1,local_dir=search_space["log_dir"], log_to_file=False)
-    )
-    
-    #ray.init()
-    
-    # Start timing 
-    start = time.time()
-
-    results = tuner.fit()
-
-    # Stop timing
-    end = time.time()
-    print(f"Time elapsed: {end - start}")
-
-    # Get a DataFrame with the results and save it to a CSV file
-    df = results.get_dataframe()
-    df.to_csv(os.path.join(search_space["log_dir"] + "/" + 'dataframe.csv'), index=False)
-
-    # Generate txt files
-    if results.errors:
-        print("ERROR!")
+def convert_training_obj(training_objective):
+    if training_objective == "TB":
+        method = "TB"
+        do_subtb = False
+    elif training_objective == "FM":
+        method = "FM"
+        do_subtb = False
+    elif training_objective == "SubTB":
+        method = "TB"
+        do_subtb = True
     else:
-        print("No errors!")
-    if results.errors:
-        with open(os.path.join(search_space["log_dir"], "error.txt"), 'w') as file:
-            file.write(f"Experiment failed for with errors {results.errors}")
-
-    with open(os.path.join(search_space["log_dir"] + "/summary.txt"), 'w') as file:
-        for i, result in enumerate(results):
-            if result.error:
-                file.write(f"Trial #{i} had an error: {result.error} \n")
-                continue
-
-            file.write(
-                f"Trial #{i} finished successfully with a {metric} metric of: {result.metrics[metric]} \n")
-
-
-    config = results.get_best_result().config
-    with open(os.path.join(search_space["log_dir"] + "/best_config.json"), 'w') as file:
-        json.dump(config, file, sort_keys=True, indent=4, skipkeys=True,
-                    default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
+        raise ValueError(f"Training objective {training_objective} not supported")
+    return method, do_subtb
 
 
 if __name__ == "__main__":
@@ -176,21 +191,13 @@ if __name__ == "__main__":
     # args = parser.parse_args()
 
     #folder_name = args.folder
-    num_cpus = get_num_cpus()
-    num_gpus = 1#torch.cuda.device_count()
 
-    ray.init(
-        num_cpus=num_cpus,
-        num_gpus=num_gpus,
-    )
-
-    CPU = num_cpus
-    GPU = float(torch.cuda.is_available())
-    num_workers = num_cpus
-
+    use_gpus = False
     num_samples = 25
-    num_training_steps = 10_000
-    validate_every = 1000
+    num_training_steps = 1_000 #10_000
+    validate_every = 100 #1000
+
+    folder_name = "logs_cpu"
 
     TASKS = ['seh', 'gsk3b', 'celecoxib_rediscovery',
     'troglitazone_rediscovery',
@@ -201,19 +208,34 @@ if __name__ == "__main__":
     
     TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
 
-    #training_objective = "TB"
-    #task = "seh"
-
-    #experiment_name = "seh_compare_training_objectives"
-    #name = training_objective
-
-
     metric = "val_loss"
 
+    num_cpus = get_num_cpus()
+    if use_gpus:
+        if torch.cuda.is_available():
+            num_gpus = torch.cuda.device_count()
+        else:
+            print("No GPUs available")
+            num_gpus = 0
+        
+    else:
+        num_gpus = 0
+    print(f"num_cpus: {num_cpus}, num_gpus: {num_gpus}")
+
+    # ray.init(
+    #     num_cpus=num_cpus,
+    #     num_gpus=num_gpus,
+    # )
+
+    group_factory = tune.PlacementGroupFactory([
+        {'CPU': 1.0, 'GPU': 0.0} for _ in range(5)
+    ])
+    print(group_factory)
+    num_workers = 1
 
     config = {
-        "log_dir": f"./logs/raytune",
-        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "log_dir": f"./logs/debug_raytune",
+        "device": "cuda" if bool(num_gpus) else "cpu", #"cuda" if torch.cuda.is_available() else "cpu",
         "seed": 0, # TODO: how is seed handled?
         "validate_every": validate_every,#1000,
         "print_every": 10,
@@ -266,33 +288,9 @@ if __name__ == "__main__":
                 }
             },
         "task": {
-            "tdc": {
-                "oracle_name": "qed",
-                }
+            "name": "seh",
             },
         }
-    
-    def convert_task_and_training_obj(task,training_objective):
-        if task == "seh":
-            from gflownet.tasks.seh_frag import main
-            oracle_name = "" #dummy
-        else:
-            from gflownet.tasks.tdc_opt import main
-            oracle_name = task
-
-
-        if training_objective == "TB":
-            method = "TB"
-            do_subtb = False
-        elif training_objective == "FM":
-            method = "FM"
-            do_subtb = False
-        elif training_objective == "SubTB":
-            method = "TB"
-            do_subtb = True
-        else:
-            raise ValueError(f"Training objective {training_objective} not supported")
-        return main, task, oracle_name,method, do_subtb
 
 
     learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4,3e-5,1e-5])
@@ -309,12 +307,12 @@ if __name__ == "__main__":
 
             name = f"{task}_{training_objective}"
 
-            main, task, oracle_name,method,do_subtb = convert_task_and_training_obj(task,training_objective)
+            method,do_subtb = convert_training_obj(training_objective)
             
             replay_use = False
 
             changes_config = {
-                "log_dir": f"./logs/{experiment_name}/{name}",
+                "log_dir": f"./{folder_name}/{experiment_name}/{name}",
                 "opt.lr_decay": lr_decay,
                 "opt.learning_rate": learning_rate,
                 "algo.tb.Z_learning_rate": Z_learning_rate,
@@ -322,12 +320,12 @@ if __name__ == "__main__":
                 "algo.method": method,
                 "algo.tb.do_subtb": do_subtb,
                 "replay.use": replay_use,
-                "task.tdc.oracle_name": oracle_name,
+                "task.name": task,
                 }
             
             search_space = change_config(copy.deepcopy(config), changes_config)
             try:
-                run_raytune(main,search_space,metric,num_samples,experiment_name,name)
+                run_raytune(search_space,metric,num_samples)
             except:
                 continue
             

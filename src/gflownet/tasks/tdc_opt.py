@@ -52,7 +52,7 @@ class TDCTask(GFNTask):
         self.dataset = dataset
         self.temperature_conditional = TemperatureConditional(cfg, rng)
         self.num_cond_dim = self.temperature_conditional.encoding_size()
-        self.oracle = Oracle(cfg.task.tdc.oracle_name)
+        self.oracle = Oracle(cfg.task.name)
 
     
     # def sample_conditional_information(self, n):
@@ -136,6 +136,8 @@ class TDCFragTrainer(StandardOnlineTrainer):
 
         cfg.cond.temperature.sample_dist = "uniform"
         cfg.cond.temperature.dist_params = [.5,32.0]
+
+        cfg.task.name = "qed"
         #cfg.oracle_name = 'celecoxib_rediscovery'
 
         #https://github.com/mims-harvard/TDC/blob/main/tutorials/TDC_105_Oracle.ipynb
@@ -274,7 +276,7 @@ def main(hps,use_wandb=False):
     trial = TDCFragTrainer(hps)
     info_val = trial.run()
     if use_wandb:
-        #wandb.log(prepend_keys(info_val,"final"))
+        wandb.log(prepend_keys(info_val,"final"))
         wandb.finish()
     return info_val
 
@@ -303,9 +305,11 @@ if __name__ == "__main__":
                 }
             },
         "task": {
-            "tdc": {
-                "oracle_name": "mestranol_similarity",
-                }
-            },
+            "name": "qed"
+            }
+            # "tdc": {
+            #     "oracle_name": "mestranol_similarity",
+            #     }
+            # },
         }
     info_val = main(hps,use_wandb = True)

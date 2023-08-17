@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=raytune
-#SBATCH --partition=long                 
+#SBATCH --job-name=run1
 #SBATCH --nodes=1
+#SBATCH --exclusive
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem-per-cpu=32GB
-#SBATCH --gpus-per-task=0
+#SBATCH --cpus-per-task=1
+#SBATCH --gpus-per-task=1
+#SBATCH --mem-per-cpu=20GB
 
 # Loading your environment
 source ~/venvs/gflownet/bin/activate

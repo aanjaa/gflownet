@@ -116,6 +116,8 @@ class SEHFragTrainer(StandardOnlineTrainer):
         cfg.cond.temperature.sample_dist = "uniform"
         cfg.cond.temperature.dist_params = [0,64.0]
 
+        cfg.task.name = "seh"
+
     def setup_task(self):
         self.task = SEHTask(
             dataset=self.training_data,
@@ -173,7 +175,7 @@ class SEHFragTrainer(StandardOnlineTrainer):
 #RAYTUNE VERSION
 def main(hps,use_wandb=False):
     if use_wandb:
-        wandb.init(project="gflownet",name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
+        wandb.init(project=hps["log_dir"].split("/")[-2],name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
 
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
@@ -185,7 +187,7 @@ def main(hps,use_wandb=False):
     trial = SEHFragTrainer(hps)
     info_val = trial.run()
     if use_wandb:
-        #wandb.log(prepend_keys(info_val,"final"))
+        wandb.log(prepend_keys(info_val,"final"))
         wandb.finish()
     
     return info_val
