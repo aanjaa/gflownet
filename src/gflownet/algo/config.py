@@ -3,9 +3,8 @@ from enum import Enum
 from typing import Optional
 
 
-class TBVariant(Enum): #new
+class TBVariant(Enum):
     """See algo.trajectory_balance.TrajectoryBalance for details."""
-
     TB = 0
     SubTB1 = 1
     DB = 2
@@ -44,8 +43,8 @@ class TBConfig:
     reward_loss_multiplier: float = 1.0
     variant: TBVariant = TBVariant.TB
     do_correct_idempotent: bool = False
-    do_parameterize_p_b: bool = False #new #deleted do_subtb
-    do_length_normalize: bool = False #new
+    do_parameterize_p_b: bool = False 
+    do_length_normalize: bool = False 
     subtb_max_len: int = 128
     Z_learning_rate: float = 1e-4
     Z_lr_decay: float = 50_000
@@ -117,6 +116,7 @@ class AlgoConfig:
     """
 
     method: str = "TB"
+    method_name : str = "TB"
     global_batch_size: int = 64
     max_len: int = 128
     max_nodes: int = 128

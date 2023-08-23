@@ -12,6 +12,7 @@ from gflownet.utils.misc import prepend_keys
 from gflownet.tasks.seh_frag import SEHFragTrainer
 from gflownet.tasks.tdc_frag import TDCFragTrainer
 from gflownet.config import Config
+from gflownet.algo.config import TBVariant
 import torch
 
 
@@ -70,8 +71,13 @@ if __name__ == "__main__":
             "lr_decay": 20_000,
             },
         "algo": {
+            "method": "TB",
             "sampling_tau": 0.99,
             "global_batch_size": 64, #64,
+            "tb": {
+                "do_length_normalize": False, ###TODO
+                "variant": TBVariant.DB,
+                },
             },
         "cond": {
             "temperature": {

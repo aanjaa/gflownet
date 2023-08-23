@@ -13,6 +13,7 @@ import time
 import torch
 import ray
 from gflownet.utils.misc import replace_dict_key,change_config, get_num_cpus
+from gflownet.algo.config import TBVariant
 
 #Global main 
 from gflownet.tasks.main import main
@@ -31,7 +32,7 @@ MODE = "min"
 
 TASKS = ['seh_frag', 'tdc_frag']             
 ORACLES = ['qed','gsk3b','drd2','sa'] 
-TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
+METHOD_NAMES = ["TB", "FM", "SubTB", "DB"]
 
 
 def run_raytune(search_space):
@@ -99,7 +100,7 @@ def run_raytune(search_space):
                 continue
 
             file.write(
-                f"Trial #{i} finished successfully with a {metric} metric of: {result.metrics[metric]} \n")
+                f"Trial #{i} finished successfully with a {METRIC} metric of: {result.metrics[METRIC]} \n")
 
 
     config = results.get_best_result().config
@@ -109,18 +110,25 @@ def run_raytune(search_space):
 
 
 def convert_training_obj(training_objective):
-    if training_objective == "TB":
-        method = "TB"
-        do_subtb = False
-    elif training_objective == "FM":
+    if training_objective == "FM":
         method = "FM"
-        do_subtb = False
-    elif training_objective == "SubTB":
+        variant = TBVariant.TB
+        method_name = "FM"
+    elif training_objective == "TB":
         method = "TB"
-        do_subtb = True
+        variant = TBVariant.TB
+        method_name = "TB"
+    elif training_objective == "SubTB1":
+        method = "TB"
+        variant = TBVariant.SubTB1
+        method_name = "SubTB1"
+    elif training_objective == "DB":
+        method = "TB"
+        variant = TBVariant.DB
+        method_name = "DB"
     else:
         raise ValueError(f"Training objective {training_objective} not supported")
-    return method, do_subtb
+    return method, method_name, variant
 
 
 if __name__ == "__main__":
@@ -168,6 +176,7 @@ if __name__ == "__main__":
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
+            "method_name": "TB",
             "sampling_tau": 0.9,
             "global_batch_size": 64,
             "offline_ratio": 0.0,
@@ -177,10 +186,11 @@ if __name__ == "__main__":
             "train_random_action_prob": 0.0,
             "valid_random_action_prob": 0.0,
             "tb": {
-                "do_subtb": False,
+                "variant": TBVariant.TB,
                 "Z_learning_rate": 1e-3,
                 "Z_lr_decay": 50_000,
                 "do_parameterize_p_b": False,
+                "do_length_normalize": False, ###TODO
                 "epsilon": None,
                 "bootstrap_own_reward": False,
                 "cum_subtb": True,
@@ -229,11 +239,11 @@ if __name__ == "__main__":
     experiment_name = "training_objectives"
 
     for task in ['seh_frag']: 
-        for training_objective in ["FM"]: #["TB", "FM", "SubTB"]TRAINING_OBJECTIVES:
+        for training_objective in ["FM"]: #["TB", "FM", "SubTB", "DB"]:
 
             name = f"{task}_{training_objective}"
 
-            method,do_subtb = convert_training_obj(training_objective)
+            method,method_name,variant = convert_training_obj(training_objective)
             
             replay_use = False
 
@@ -244,7 +254,8 @@ if __name__ == "__main__":
                 "algo.tb.Z_learning_rate": Z_learning_rate,
                 "algo.tb.Z_lr_decay": Z_lr_decay,
                 "algo.method": method,
-                "algo.tb.do_subtb": do_subtb,
+                "algo.method_name": method_name,
+                "algo.tb.variant": variant,
                 "replay.use": replay_use,
                 "task.name": task,
                 "task.tdc.oracle": "qed"
