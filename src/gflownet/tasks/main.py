@@ -71,7 +71,7 @@ if __name__ == "__main__":
             },
         "algo": {
             "sampling_tau": 0.99,
-            "global_batch_size": 2, #64,
+            "global_batch_size": 64, #64,
             },
         "cond": {
             "temperature": {
