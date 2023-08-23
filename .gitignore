@@ -133,6 +133,7 @@ wandb/
 
 # Logs
 logs/
+logs_cpu/
 
 # VSCode
 launch.json
@@ -140,6 +141,5 @@ launch.json
 
 oracle/
 
-logs_cpu/
 
 

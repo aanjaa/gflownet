@@ -427,3 +427,4 @@ class SQLiteLog:
         cur.executemany(f'insert into results values ({",".join("?"*len(rows[0]))})', rows)  # nosec
         cur.close()
         self.db.commit()
+        

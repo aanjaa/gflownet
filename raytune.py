@@ -14,17 +14,32 @@ from argparse import ArgumentParser
 import time
 import torch
 import ray
+from gflownet.tasks.main import main
+from gflownet.utils.logging import replace_dict_key,change_config
+
+NUM_GPUS = 1
+GROUP_FACTORY = tune.PlacementGroupFactory([{'CPU': 1.0, 'GPU': 0.25}])
+
+FOLDER_NAME = "logs"
+NUM_SAMPLES = 16
+NUM_TRAINING_STEPS = 10_000 #10_000
+VALIDATE_EVERY = 1000 #1000
+METRIC = "val_loss"
+
+
+TASKS = ['seh_frag', 'tdc_frag']             
+ORACLES = ['gsk3b', 'celecoxib_rediscovery',
+'troglitazone_rediscovery',
+'thiothixene_rediscovery', 'albuterol_similarity', 'mestranol_similarity',
+'isomers_c7h8n2o2', 'isomers_c9h10n2o2pf2cl', 'median1', 'median2', 'osimertinib_mpo',
+'fexofenadine_mpo', 'ranolazine_mpo', 'perindopril_mpo', 'amlodipine_mpo',
+'sitagliptin_mpo', 'zaleplon_mpo', 'valsartan_smarts', 'deco_hop', 'scaffold_hop', 'qed', 'drd2']
+TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
+
 
 _SLURM_JOB_CPUS_FILENAME = '/sys/fs/cgroup/cpuset/slurm/uid_%s/job_%s/cpuset.cpus'
 
-
 def run_raytune(search_space,metric,num_samples):
-
-    if search_space["task"]["name"] == "seh":
-        from gflownet.tasks.seh_frag import main
-    else:
-        from gflownet.tasks.tdc_opt import main
-
 
     if os.path.exists(search_space["log_dir"]):
         if search_space["overwrite_existing_exp"]:
@@ -43,10 +58,10 @@ def run_raytune(search_space,metric,num_samples):
     shutil.copy(__file__, os.path.join(search_space["log_dir"] + "/ray.py"))
 
     tuner = tune.Tuner(
-        # tune.with_resources(
-        #     functools.partial(main,use_wandb=True),
-        #     resources=group_factory),
-        functools.partial(main,use_wandb=True),
+        tune.with_resources(
+            functools.partial(main,use_wandb=True),
+            resources=group_factory),
+        #functools.partial(main,use_wandb=True),
         param_space=search_space,
         tune_config=tune.TuneConfig(
             metric=metric,
@@ -57,7 +72,7 @@ def run_raytune(search_space,metric,num_samples):
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
             # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
         ),
-        run_config=air.RunConfig(name="details", verbose=1,local_dir=search_space["log_dir"], log_to_file=False)
+        run_config=air.RunConfig(name="details", verbose=2,local_dir=search_space["log_dir"], log_to_file=False)
     )
     
     # Start timing 
@@ -98,24 +113,6 @@ def run_raytune(search_space,metric,num_samples):
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
 
-def replace_dict_key(dictionary, key, value):
-    keys = key.split(".")
-    current_dict = dictionary
-
-    for k in keys[:-1]:
-        if k in current_dict:
-            current_dict = current_dict[k]
-        else:
-            raise KeyError(f"Key '{key}' does not exist in the dictionary.")
-
-    last_key = keys[-1]
-    if last_key in current_dict:
-        current_dict[last_key] = value
-    else:
-        raise KeyError(f"Key '{key}' does not exist in the dictionary.")
-
-    return dictionary
-
 def convert_str_to_bool(args_obj, args_to_convert):
     for arg in args_to_convert:
         # check format
@@ -129,10 +126,6 @@ def convert_str_to_bool(args_obj, args_to_convert):
         setattr(args_obj, arg, bool_value)
     return args_obj
 
-def change_config(config,changes_config):
-    for key, value in changes_config.items():
-        config = replace_dict_key(config, key, value)
-    return config
 
 def get_num_cpus() -> int:
     '''
@@ -192,46 +185,26 @@ if __name__ == "__main__":
 
     #folder_name = args.folder
 
-    use_gpus = False
-    num_samples = 25
-    num_training_steps = 1_000 #10_000
-    validate_every = 100 #1000
-
-    folder_name = "logs_cpu"
-
-    TASKS = ['seh', 'gsk3b', 'celecoxib_rediscovery',
-    'troglitazone_rediscovery',
-    'thiothixene_rediscovery', 'albuterol_similarity', 'mestranol_similarity',
-    'isomers_c7h8n2o2', 'isomers_c9h10n2o2pf2cl', 'median1', 'median2', 'osimertinib_mpo',
-    'fexofenadine_mpo', 'ranolazine_mpo', 'perindopril_mpo', 'amlodipine_mpo',
-    'sitagliptin_mpo', 'zaleplon_mpo', 'valsartan_smarts', 'deco_hop', 'scaffold_hop', 'qed', 'drd2']
-    
-    TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
-
-    metric = "val_loss"
-
-    num_cpus = get_num_cpus()
-    if use_gpus:
-        if torch.cuda.is_available():
-            num_gpus = torch.cuda.device_count()
-        else:
-            print("No GPUs available")
-            num_gpus = 0
+    # num_cpus = get_num_cpus()
+    # if use_gpus:
+    #     if torch.cuda.is_available():
+    #         #num_gpus = torch.cuda.device_count() #this doesn't always work on the cluster
+    #         num_gpus = num_gpus
+    #     else:
+    #         print("No GPUs available")
+    #         num_gpus = 0
         
-    else:
-        num_gpus = 0
-    print(f"num_cpus: {num_cpus}, num_gpus: {num_gpus}")
+    # else:
+    #     num_gpus = 0
+    # print(f"num_cpus: {num_cpus}, num_gpus: {num_gpus}")
 
-    # ray.init(
-    #     num_cpus=num_cpus,
-    #     num_gpus=num_gpus,
-    # )
+    ray.init(
+        num_cpus=get_num_cpus(), #num_cpus,#8, #num_cpus,
+        num_gpus=num_gpus, # num_gpus #2 #num_gpus,
+    )
 
-    group_factory = tune.PlacementGroupFactory([
-        {'CPU': 1.0, 'GPU': 0.0} for _ in range(5)
-    ])
     print(group_factory)
-    num_workers = 1
+    num_workers = 0
 
     config = {
         "log_dir": f"./logs/debug_raytune",
@@ -241,6 +214,7 @@ if __name__ == "__main__":
         "print_every": 10,
         "num_training_steps": num_training_steps,#10_000,
         "num_workers": num_workers,
+        "num_final_gen_steps": 2, #TODO
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
@@ -289,21 +263,22 @@ if __name__ == "__main__":
             },
         "task": {
             "name": "seh",
+            "tdc": {
+                "oracle": "qed"
+                }
             },
         }
 
-
-    learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4,3e-5,1e-5])
+    learning_rate = tune.choice([3e-4,1e-4,3e-5,1e-5])
     lr_decay = tune.choice([20_000,10_000,1_000])
-    Z_learning_rate = tune.choice([3e-1,1e-1,3e-2,1e-2,3e-3,1e-3,3e-4,1e-4])
+    Z_learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4])
     Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000])
-
 
     search_spaces = []
     experiment_name = "training_objectives"
 
-    for task in ['seh','qed','albuterol_similarity','gsk3b', 'celecoxib_rediscovery']:
-        for training_objective in TRAINING_OBJECTIVES:
+    for task in ['seh_frag']: 
+        for training_objective in ["FM"]: #["TB", "FM", "SubTB"]TRAINING_OBJECTIVES:
 
             name = f"{task}_{training_objective}"
 
@@ -321,11 +296,15 @@ if __name__ == "__main__":
                 "algo.tb.do_subtb": do_subtb,
                 "replay.use": replay_use,
                 "task.name": task,
+                "task.tdc.oracle": "qed"
                 }
             
             search_space = change_config(copy.deepcopy(config), changes_config)
-            try:
-                run_raytune(search_space,metric,num_samples)
-            except:
-                continue
+
+            run_raytune(search_space,metric,num_samples)
+
+            #try:
+            #    run_raytune(search_space,metric,num_samples)
+            #except:
+            #    continue
             

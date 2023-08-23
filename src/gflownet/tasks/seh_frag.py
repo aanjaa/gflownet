@@ -172,49 +172,57 @@ class SEHFragTrainer(StandardOnlineTrainer):
 #     main()
 
 
-#RAYTUNE VERSION
-def main(hps,use_wandb=False):
-    if use_wandb:
-        wandb.init(project=hps["log_dir"].split("/")[-2],name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
+# #RAYTUNE VERSION
+# def main(hps,use_wandb=False):
+#     if use_wandb:
+#         wandb.init(project=hps["log_dir"].split("/")[-2]+"_sweep",name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
 
-    if os.path.exists(hps["log_dir"]):
-        if hps["overwrite_existing_exp"]:
-            shutil.rmtree(hps["log_dir"])
-        else:
-            raise ValueError(f"Log dir {hps['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
-    os.makedirs(hps["log_dir"])
+#     if os.path.exists(hps["log_dir"]):
+#         if hps["overwrite_existing_exp"]:
+#             shutil.rmtree(hps["log_dir"])
+#         else:
+#             raise ValueError(f"Log dir {hps['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
+#     os.makedirs(hps["log_dir"])
 
-    trial = SEHFragTrainer(hps)
-    info_val = trial.run()
-    if use_wandb:
-        wandb.log(prepend_keys(info_val,"final"))
-        wandb.finish()
+#     trial = SEHFragTrainer(hps)
+#     info_final = trial.run()
+#     if trial.cfg.num_final_gen_steps > 0:
+#         info_candidates = candidates_eval(path = hps["log_dir"]+"/final", k=100, thresh=0.7)
+#         info_val = {**info_final,**info_candidates}
     
-    return info_val
+#     if use_wandb:
+#         wandb.log(prepend_keys(info_final,"final"))
+#         wandb.finish()
+    
+#     return info_val
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    hps = {
-    "log_dir": "./logs/debug_run_seh_frag",
-    "device": "cuda"  if torch.cuda.is_available() else "cpu",
-    "overwrite_existing_exp": True,
-    "num_training_steps": 20, #10_000,
-    "print_every": 1,
-    "validate_every":20,
-    "num_workers": 1,
-    "opt": {
-        "lr_decay": 20000,
-        },
-    "algo": {
-        "method": "FM",
-        "sampling_tau": 0.99,
-        },
-    "cond": {
-        "temperature": {
-            "sample_dist": "uniform",
-            "dist_params": [0, 64.0],
-            }
-        },
-    }
-    info_val = main(hps,use_wandb= False)
+#     hps = {
+#     "log_dir": "./logs/debug_run_seh_frag",
+#     "device": "cuda"  if torch.cuda.is_available() else "cpu",
+#     "overwrite_existing_exp": True,
+#     "num_training_steps": 10, #10_000,
+#     "print_every": 1,
+#     "validate_every":10,
+#     "num_workers": 2,
+#     "num_final_gen_steps": 2 ,
+#     "opt": {
+#         "lr_decay": 20000,
+#         },
+#     "algo": {
+#         "method": "TB",
+#         "sampling_tau": 0.99,
+#         },
+#     "cond": {
+#         "temperature": {
+#             "sample_dist": "uniform",
+#             "dist_params": [0, 64.0],
+#             }
+#         },
+#     "task": {
+#         "name": "seh"
+#         }
+#     }
+#     info_val = main(hps,use_wandb= False)

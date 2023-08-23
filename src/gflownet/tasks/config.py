@@ -56,9 +56,9 @@ class QM9TaskConfig:
     h5_path: str = "./data/qm9/qm9.h5"  # see src/gflownet/data/qm9.py
     model_path: str = "./data/qm9/qm9_model.pt"
 
-# @dataclass
-# class TDCTaskConfig:
-#     oracle_name: str = "QED"
+@dataclass
+class TDCTaskConfig:
+    oracle: str = "qed"
 
 @dataclass
 class TasksConfig:
@@ -66,4 +66,4 @@ class TasksConfig:
     qm9: QM9TaskConfig = QM9TaskConfig()
     seh: SEHTaskConfig = SEHTaskConfig()
     seh_moo: SEHMOOTaskConfig = SEHMOOTaskConfig()
-    #tdc: TDCTaskConfig = TDCTaskConfig()
+    tdc: TDCTaskConfig = TDCTaskConfig()
