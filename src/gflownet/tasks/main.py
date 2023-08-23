@@ -61,7 +61,7 @@ if __name__ == "__main__":
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
         "num_training_steps": 10, #10_000,
-        "print_every": 10,
+        "print_every": 2,
         "validate_every":10,
         "num_workers": 0,
         "num_final_gen_steps": 2,
