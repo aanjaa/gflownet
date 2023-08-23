@@ -183,6 +183,7 @@ if __name__ == "__main__":
                 "do_parameterize_p_b": False,
                 "epsilon": None,
                 "bootstrap_own_reward": False,
+                "cum_subtb": True,
                 },
             },
         "model": {

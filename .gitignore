@@ -137,7 +137,7 @@ wandb/
 
 # Logs
 logs/
-logs_cpu/
+logs_debug/
 
 # VSCode
 launch.json

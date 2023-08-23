@@ -54,7 +54,7 @@ def get_Trainer(hps) -> Union[SEHFragTrainer, TDCFragTrainer]:
 
 if __name__ == "__main__":
 
-    task_name = "tdc_frag" #"seh_frag"
+    task_name = "seh_frag" #"seh_frag"
 
     hps = {
         "log_dir": f"./logs/debug_{task_name}/",
