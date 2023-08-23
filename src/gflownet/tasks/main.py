@@ -4,12 +4,11 @@ import shutil
 import socket
 from typing import Callable, Dict, List, Tuple, Union
 import wandb
-from gflownet.utils.logging import prepend_keys
 
 import numpy as np
 import wandb
 from gflownet.utils.metrics_final_eval import candidates_eval
-from gflownet.utils.logging import prepend_keys
+from gflownet.utils.misc import prepend_keys
 from gflownet.tasks.seh_frag import SEHFragTrainer
 from gflownet.tasks.tdc_frag import TDCFragTrainer
 from gflownet.config import Config
@@ -40,6 +39,7 @@ def main(hps,use_wandb=False):
         wandb.log(prepend_keys(info_final,"final"))
         wandb.finish()
     
+    #print(info_final)
     return info_final
 
 
@@ -63,13 +63,15 @@ if __name__ == "__main__":
         "num_training_steps": 10, #10_000,
         "print_every": 10,
         "validate_every":10,
-        "num_workers": 1,
-        "num_final_gen_steps": 2 ,
+        "num_workers": 0,
+        "num_final_gen_steps": 2,
+        "top_k": 100,
         "opt": {
             "lr_decay": 20_000,
             },
         "algo": {
             "sampling_tau": 0.99,
+            "global_batch_size": 2, #64,
             },
         "cond": {
             "temperature": {

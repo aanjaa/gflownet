@@ -18,7 +18,7 @@ from gflownet.data.sampling_iterator import SamplingIterator
 from gflownet.envs.graph_building_env import GraphActionCategorical, GraphBuildingEnv, GraphBuildingEnvContext
 from gflownet.utils.misc import create_logger
 from gflownet.utils.multiprocessing_proxy import mp_object_wrapper
-from gflownet.utils.logging import prepend_keys, average_values_across_dicts
+from gflownet.utils.misc import prepend_keys, average_values_across_dicts
 import wandb
 import omegaconf
 

@@ -2,8 +2,6 @@ import os
 import shutil
 import socket
 from typing import Callable, Dict, List, Tuple, Union
-import wandb
-from gflownet.utils.logging import prepend_keys
 
 import numpy as np
 import torch

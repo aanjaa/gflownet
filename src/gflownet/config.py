@@ -66,6 +66,8 @@ class Config:
         The training step to start at (default: 0)
     num_final_gen_steps : Optional[int]
         After training, the number of steps to generate graphs for
+    top_k : int
+        The number of top-k graphs to evaluate on
     num_training_steps : int
         The number of training steps
     num_workers : int
@@ -89,6 +91,7 @@ class Config:
     print_every: int = 100
     start_at_step: int = 0
     num_final_gen_steps: Optional[int] = None
+    top_k: int = 100
     num_training_steps: int = 10_000
     num_workers: int = 0
     hostname: Optional[str] = None

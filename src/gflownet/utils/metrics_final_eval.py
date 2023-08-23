@@ -12,10 +12,13 @@ import os
 import glob
 
 
-def candidates_eval(path, k=100, thresh=0.7):
+def candidates_eval(path, k=100, thresh=0.9):
     df = read_db_data_in_folder(path)
 
     df = df.drop_duplicates(subset=["smi"])
+
+    if len(df) < k:
+        raise ValueError(f"Number of unique SMILES ({len(df)}) is less than k ({k})")
 
     df["mol"] = df["smi"].apply(lambda x: Chem.MolFromSmiles(x))
 

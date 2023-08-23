@@ -3,8 +3,6 @@ import copy
 from typing import Any, Callable, Dict, List, Tuple, Union
 import os
 import shutil
-import wandb
-from gflownet.utils.logging import prepend_keys
 
 import numpy as np
 from rdkit import RDLogger

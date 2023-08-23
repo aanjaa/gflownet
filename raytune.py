@@ -8,38 +8,33 @@ from ray import air, tune
 from ray.tune.search.basic_variant import BasicVariantGenerator
 import multiprocessing
 
-from pathlib import Path
-
 from argparse import ArgumentParser
 import time
 import torch
 import ray
+from gflownet.utils.misc import replace_dict_key,change_config, get_num_cpus
+
+#Global main 
 from gflownet.tasks.main import main
-from gflownet.utils.logging import replace_dict_key,change_config
 
 NUM_GPUS = 1
-GROUP_FACTORY = tune.PlacementGroupFactory([{'CPU': 1.0, 'GPU': 0.25}])
+GROUP_FACTORY = tune.PlacementGroupFactory([{'CPU': 2.0, 'GPU': 0.25}])
+NUM_WORKERS = 2
 
 FOLDER_NAME = "logs"
 NUM_SAMPLES = 16
 NUM_TRAINING_STEPS = 10_000 #10_000
 VALIDATE_EVERY = 1000 #1000
-METRIC = "val_loss"
 
+METRIC = "val_loss"
+MODE = "min"   
 
 TASKS = ['seh_frag', 'tdc_frag']             
-ORACLES = ['gsk3b', 'celecoxib_rediscovery',
-'troglitazone_rediscovery',
-'thiothixene_rediscovery', 'albuterol_similarity', 'mestranol_similarity',
-'isomers_c7h8n2o2', 'isomers_c9h10n2o2pf2cl', 'median1', 'median2', 'osimertinib_mpo',
-'fexofenadine_mpo', 'ranolazine_mpo', 'perindopril_mpo', 'amlodipine_mpo',
-'sitagliptin_mpo', 'zaleplon_mpo', 'valsartan_smarts', 'deco_hop', 'scaffold_hop', 'qed', 'drd2']
+ORACLES = ['qed','gsk3b','drd2','sa'] 
 TRAINING_OBJECTIVES = ["TB", "FM", "SubTB"]
 
 
-_SLURM_JOB_CPUS_FILENAME = '/sys/fs/cgroup/cpuset/slurm/uid_%s/job_%s/cpuset.cpus'
-
-def run_raytune(search_space,metric,num_samples):
+def run_raytune(search_space):
 
     if os.path.exists(search_space["log_dir"]):
         if search_space["overwrite_existing_exp"]:
@@ -60,13 +55,13 @@ def run_raytune(search_space,metric,num_samples):
     tuner = tune.Tuner(
         tune.with_resources(
             functools.partial(main,use_wandb=True),
-            resources=group_factory),
+            resources=GROUP_FACTORY),
         #functools.partial(main,use_wandb=True),
         param_space=search_space,
         tune_config=tune.TuneConfig(
-            metric=metric,
-            mode="min",
-            num_samples=num_samples,
+            metric=METRIC,
+            mode=MODE,
+            num_samples=NUM_SAMPLES,
             # scheduler=tune.schedulers.ASHAScheduler(grace_period=10),
             search_alg=BasicVariantGenerator(constant_grid_search=True),
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
@@ -113,53 +108,6 @@ def run_raytune(search_space,metric,num_samples):
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
 
-def convert_str_to_bool(args_obj, args_to_convert):
-    for arg in args_to_convert:
-        # check format
-        curr_value = getattr(args_obj, arg)
-        try:
-            assert curr_value in ['true', 'false']
-        except:
-            raise ValueError(f' Argument {arg}={curr_value} needs to provided as true or false')
-        # set bool format
-        bool_value = True if curr_value == 'true' else False
-        setattr(args_obj, arg, bool_value)
-    return args_obj
-
-
-def get_num_cpus() -> int:
-    '''
-    In a typical slurm allocation we only have access to a subset of the
-    current node's CPUs.  Allocating ray with more CPUs than we actually
-    have naturally leads to massive slowdowns in code performance, so
-    we should avoid this.
-
-    For any job allocation, Slurm writes a file to /sys listing the
-    CPUs on the node which belong to the allocation.  If the code is
-    being run on a slurm allocation this function reads the slurm CPU file
-    and returns the number of CPUs allocated for the job.  If not on a slurm
-    allocation, ray is initialized by default with the number of CPUs available
-    on the system.
-    '''
-    if 'SLURM_JOB_ID' not in os.environ:
-        return os.cpu_count()
-
-    uid, slurm_job_id = os.getuid(), os.environ['SLURM_JOB_ID']
-    fname = Path(_SLURM_JOB_CPUS_FILENAME % (uid, slurm_job_id))
-
-    num_cpus = 0
-    with open(fname, 'r') as f:
-        line = f.read().replace('\n', '')
-        for substr in line.split(','):
-            if '-' not in substr:
-                num_cpus += 1
-                continue
-
-            cpu_nums = list(map(int, substr.split('-')))
-            num_cpus += cpu_nums[1] - cpu_nums[0] + 1
-
-    return num_cpus
-
 def convert_training_obj(training_objective):
     if training_objective == "TB":
         method = "TB"
@@ -200,21 +148,23 @@ if __name__ == "__main__":
 
     ray.init(
         num_cpus=get_num_cpus(), #num_cpus,#8, #num_cpus,
-        num_gpus=num_gpus, # num_gpus #2 #num_gpus,
+        num_gpus=NUM_GPUS, # num_gpus #2 #num_gpus,
     )
 
-    print(group_factory)
-    num_workers = 0
+    print(f"Number of cpus: {get_num_cpus()}, number of gpus: {NUM_GPUS}")
+    print(f"Placement group factory: {GROUP_FACTORY}")
+    print(f"Number of workers: {NUM_WORKERS}")
 
     config = {
         "log_dir": f"./logs/debug_raytune",
-        "device": "cuda" if bool(num_gpus) else "cpu", #"cuda" if torch.cuda.is_available() else "cpu",
+        "device": "cuda" if bool(NUM_GPUS) else "cpu", #"cuda" if torch.cuda.is_available() else "cpu",
         "seed": 0, # TODO: how is seed handled?
-        "validate_every": validate_every,#1000,
+        "validate_every": VALIDATE_EVERY,#1000,
         "print_every": 10,
-        "num_training_steps": num_training_steps,#10_000,
-        "num_workers": num_workers,
+        "num_training_steps": NUM_TRAINING_STEPS,#10_000,
+        "num_workers": NUM_WORKERS,
         "num_final_gen_steps": 2, #TODO
+        "top_k": 100,
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
@@ -287,7 +237,7 @@ if __name__ == "__main__":
             replay_use = False
 
             changes_config = {
-                "log_dir": f"./{folder_name}/{experiment_name}/{name}",
+                "log_dir": f"./{FOLDER_NAME}/{experiment_name}/{name}",
                 "opt.lr_decay": lr_decay,
                 "opt.learning_rate": learning_rate,
                 "algo.tb.Z_learning_rate": Z_learning_rate,
@@ -301,7 +251,7 @@ if __name__ == "__main__":
             
             search_space = change_config(copy.deepcopy(config), changes_config)
 
-            run_raytune(search_space,metric,num_samples)
+            run_raytune(search_space)
 
             #try:
             #    run_raytune(search_space,metric,num_samples)
