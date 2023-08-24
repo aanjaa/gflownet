@@ -98,7 +98,7 @@ class ReplayBuffer(object):
 
             elif self.insertion_strategy == "diversity_and_reward":
                 """
-                Every inserted x satisfies two criteria: increase the lowest reward (unless the lowest reward is above a threshold) AND decrease the max similarity between any two elements in the buffer (unless all elements are already diverse enough).
+                Every inserted x satisfies two criteria: it increases the lowest reward (unless the lowest reward is above a threshold) AND decreases the max similarity between any two elements in the buffer (unless all elements are already diverse enough).
                 Replace spot: randomly chosen between element with lowest reward and element with highest similarity
                 """
                 max_sim,max_sim_idx = self.compute_max_sim_with_buffer(traj)
