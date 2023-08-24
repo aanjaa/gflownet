@@ -33,7 +33,7 @@ def main(hps,use_wandb=False):
     trial = Trainer(hps)
     info_final = trial.run()
     if trial.cfg.num_final_gen_steps > 0:
-        info_candidates = candidates_eval(path = hps["log_dir"]+"/final", k=100, thresh=0.7)
+        info_candidates = candidates_eval(path = hps["log_dir"]+"/final", k=hps["top_k"], thresh=0.7)
         info_final = {**info_final,**info_candidates}
     
     if use_wandb:
@@ -79,6 +79,16 @@ if __name__ == "__main__":
                 "variant": TBVariant.DB,
                 },
             },
+        "replay": {
+            "use": True,
+            "capacity": 100,
+            "warmup": 100,
+            "hindsight_ratio": 0.0,
+            "sampling_strategy": "uniform",
+            "insertion_strategy": "best_diversity_and_reward",
+            "sim_thresh": 0.7,
+            "reward_thresh": 0.9,
+            },
         "cond": {
             "temperature": {
                 "sample_dist": "uniform",
@@ -92,5 +102,5 @@ if __name__ == "__main__":
                 },
             }
         }
-    info_val = main(hps,use_wandb = True)
+    info_val = main(hps,use_wandb = False)
 

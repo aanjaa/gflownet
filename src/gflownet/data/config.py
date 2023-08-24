@@ -16,10 +16,21 @@ class ReplayConfig:
         The number of samples to collect before starting to sample from the replay buffer
     hindsight_ratio : float
         The ratio of hindsight samples within a batch
+    insertion_strategy : str
+        The strategy to use for inserting samples into the replay buffer
+    diversity_thresh : float
+        The diversity threshold for the insertion strategy "fifo_diversity_thresh"
+    reward_thresh : float
+        The reward threshold for the insertion strategy "fifo_reward_thresh"
+    sampling_strategy : str
+        The strategy to use for sampling from the replay buffer
     """
 
     use: bool = False
     capacity: Optional[int] = None
     warmup: Optional[int] = None
     hindsight_ratio: float = 0
-    sampling_strategy: str = "weighted" #"beta_perc_from_top_alpha_perc_rewards"
+    insertion_strategy: str = "fifo" # "top_diversity" # "top_rewards" # ""
+    sim_thresh: float = 0.7 
+    reward_thresh: float = 0.9 
+    sampling_strategy: str = "weighted" #"reward_prioritized"

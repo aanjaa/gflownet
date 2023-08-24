@@ -215,6 +215,8 @@ if __name__ == "__main__":
             "capacity": 10_000,
             "warmup": 1_000,
             "hindsight_ratio": 0.0,
+            "insertion_strategy": "fifo",
+            "sampling_strategy": "weighted",
             },
         "cond": {
             "temperature": {

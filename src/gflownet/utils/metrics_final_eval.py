@@ -12,7 +12,7 @@ import os
 import glob
 
 
-def candidates_eval(path, k=100, thresh=0.9):
+def candidates_eval(path, k=100, thresh=0.7):
     df = read_db_data_in_folder(path)
 
     df = df.drop_duplicates(subset=["smi"])
