@@ -61,7 +61,7 @@ if __name__ == "__main__":
         "log_dir": f"./logs/debug_{task_name}/",
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 10, #10_000,
+        "num_training_steps": 100, #10_000,
         "print_every": 2,
         "validate_every":10,
         "num_workers": 0,
@@ -81,13 +81,24 @@ if __name__ == "__main__":
             },
         "replay": {
             "use": True,
-            "capacity": 100,
+            "capacity": 200,
             "warmup": 100,
             "hindsight_ratio": 0.0,
-            "sampling_strategy": "uniform",
-            "insertion_strategy": "best_diversity_and_reward",
-            "sim_thresh": 0.7,
-            "reward_thresh": 0.9,
+            "insertion": {
+                "strategy": "reward",#"diversity_and_reward_fast",
+                "sim_thresh": 0.7,
+                "reward_thresh": 0.9,
+                },
+            "sampling":{
+                "strategy": "weighted",
+                "weighted": {
+                    "reward_power": 1.0,
+                    },
+                "quantile": {
+                    "alpha": 0.1,
+                    "beta": 0.5,
+                    },
+                },
             },
         "cond": {
             "temperature": {

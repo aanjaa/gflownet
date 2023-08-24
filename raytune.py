@@ -211,12 +211,25 @@ if __name__ == "__main__":
             "adam_eps": 1e-8,
             },
         "replay": {
-            "use": False,
-            "capacity": 10_000,
-            "warmup": 1_000,
+            "use": True,
+            "capacity": 100,
+            "warmup": 100,
             "hindsight_ratio": 0.0,
-            "insertion_strategy": "fifo",
-            "sampling_strategy": "weighted",
+            "insertion": {
+                "strategy": "diversity",#"diversity_and_reward_fast",
+                "sim_thresh": 0.7,
+                "reward_thresh": 0.9,
+                },
+            "sampling":{
+                "strategy": "weighted",
+                "weighted": {
+                    "reward_power": 1.0,
+                    },
+                "quantile": {
+                    "alpha": 0.1,
+                    "beta": 0.5,
+                    },
+                },
             },
         "cond": {
             "temperature": {

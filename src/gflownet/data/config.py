@@ -1,6 +1,26 @@
 from dataclasses import dataclass
 from typing import Optional
+    
+@dataclass
+class InsertionBufferConfig:
+    strategy: str = "fifo"
+    sim_thresh: float = 0.7 
+    reward_thresh: float = 0.9 
 
+@dataclass
+class QuantileSamplingCOnfig:
+    alpha: float = 0.1
+    beta: float = 0.5
+
+@dataclass
+class WeightedSamplingConfig:
+    reward_power: float = 1.0
+
+@dataclass
+class SamplingBufferConfig:
+    strategy: str = "uniform"
+    weighted: WeightedSamplingConfig = WeightedSamplingConfig()
+    quantile: QuantileSamplingCOnfig = QuantileSamplingCOnfig()
 
 @dataclass
 class ReplayConfig:
@@ -30,7 +50,5 @@ class ReplayConfig:
     capacity: Optional[int] = None
     warmup: Optional[int] = None
     hindsight_ratio: float = 0
-    insertion_strategy: str = "fifo" # "top_diversity" # "top_rewards" # ""
-    sim_thresh: float = 0.7 
-    reward_thresh: float = 0.9 
-    sampling_strategy: str = "weighted" #"reward_prioritized"
+    insertion: InsertionBufferConfig = InsertionBufferConfig()
+    sampling: SamplingBufferConfig = SamplingBufferConfig()
