@@ -45,6 +45,8 @@ class TemperatureConditional(Conditional):
             self.upper_bound = tmp_cfg.dist_params[1]
         elif tmp_cfg.sample_dist == "beta":
             self.upper_bound = 1
+        elif tmp_cfg.sample_dist == "discrete":
+            self.upper_bound = max(tmp_cfg.dist_params)
 
     def encoding_size(self):
         return self.cfg.cond.temperature.num_thermometer_dim
@@ -69,6 +71,12 @@ class TemperatureConditional(Conditional):
             elif cfg.sample_dist == "beta":
                 a, b = float(cfg.dist_params[0]), float(cfg.dist_params[1])
                 beta = self.rng.beta(a, b, n).astype(np.float32)
+            elif cfg.sample_dist == "discrete":
+                idcs = self.rng.integers(0, len(cfg.dist_params), n) # randomly decide which temperature to use for each sample
+                beta = torch.tensor([cfg.dist_params[int(i)] for i in idcs]).float()
+                #beta_enc = torch.zeros((n, cfg.num_thermometer_dim))  
+                #beta_enc[torch.arange(n), idcs] = 1
+        
             beta_enc = thermometer(torch.tensor(beta), cfg.num_thermometer_dim, 0, self.upper_bound)
 
         assert len(beta.shape) == 1, f"beta should be a 1D array, got {beta.shape}"

@@ -29,9 +29,9 @@ def candidates_eval(path, k=100, thresh=0.7):
     candidates = list(zip(rewards, smiles, mols))
     candidates = sorted(candidates, key=lambda m: m[0], reverse=True)
 
-    topk = get_topk(rewards, k=k)
+    avg_topk = compute_avg_topk(rewards, k=k)
     diverse_topk = compute_diverse_topk(candidates, k=k, thresh=thresh)
-    return {"topk": topk, "diverse_topk": diverse_topk}
+    return {"avg_topk": avg_topk, "diverse_topk": diverse_topk}
 
 
 
@@ -51,7 +51,7 @@ def compute_diverse_topk(candidates, k, thresh=0.7):
     return np.mean([i[0] for i in modes])  # return sim
 
 
-def get_topk(rewards,k):
+def compute_avg_topk(rewards,k):
     # Sort the rewards
     rewards = sorted(rewards, reverse=True)
     # Get the top k rewards

@@ -61,26 +61,27 @@ if __name__ == "__main__":
         "log_dir": f"./logs/debug_{task_name}/",
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 100, #10_000,
-        "print_every": 2,
+        "num_training_steps": 10, #10_000,
+        "print_every": 1,
         "validate_every":10,
-        "num_workers": 0,
-        "num_final_gen_steps": 2,
+        "num_workers": 5, 
+        "num_final_gen_steps": 160,
         "top_k": 100,
         "opt": {
             "lr_decay": 20_000,
             },
         "algo": {
             "method": "TB",
+            "method_name": "TB",
             "sampling_tau": 0.99,
-            "global_batch_size": 64, #64,
+            "global_batch_size": 128, #64,
             "tb": {
                 "do_length_normalize": False, ###TODO
                 "variant": TBVariant.DB,
                 },
             },
         "replay": {
-            "use": True,
+            "use": False,
             "capacity": 200,
             "warmup": 100,
             "hindsight_ratio": 0.0,
@@ -101,10 +102,15 @@ if __name__ == "__main__":
                 },
             },
         "cond": {
+            # "temperature": {
+            #     "sample_dist": "uniform",
+            #     "dist_params": [0, 64.0],
+            #     }
             "temperature": {
-                "sample_dist": "uniform",
-                "dist_params": [0, 64.0],
-                }
+                "sample_dist": ["uniform"], #"discrete", #"uniform" #"constant"
+                "dist_params": [0, 64.0], #[16,32,64,96,128] ,#[0, 64.0] # [1.0]
+                "num_thermometer_dim": 32,
+                },
             },
         "task": {
             "name": task_name, 

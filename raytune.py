@@ -32,7 +32,7 @@ MODE = "min"
 
 TASKS = ['seh_frag', 'tdc_frag']             
 ORACLES = ['qed','gsk3b','drd2','sa'] 
-METHOD_NAMES = ["TB", "FM", "SubTB", "DB"]
+METHOD_NAMES =  ["TB", "FM", "SubTB1", "DB"]
 
 
 def run_raytune(search_space):
@@ -165,14 +165,14 @@ if __name__ == "__main__":
 
     config = {
         "log_dir": f"./logs/debug_raytune",
-        "device": "cuda" if bool(NUM_GPUS) else "cpu", #"cuda" if torch.cuda.is_available() else "cpu",
+        "device": "cuda" if bool(NUM_GPUS) else "cpu",
         "seed": 0, # TODO: how is seed handled?
         "validate_every": VALIDATE_EVERY,#1000,
         "print_every": 10,
         "num_training_steps": NUM_TRAINING_STEPS,#10_000,
         "num_workers": NUM_WORKERS,
-        "num_final_gen_steps": 2, #TODO
-        "top_k": 100,
+        "num_final_gen_steps": 2, #Num final molecules = num_final_gen_steps*batch_size 
+        "top_k": 100, #For evaluation
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
@@ -233,8 +233,9 @@ if __name__ == "__main__":
             },
         "cond": {
             "temperature": {
-                "sample_dist": "uniform",
-                "dist_params": [0, 64.0],
+                "sample_dist": "constant", #"uniform"
+                "dist_params": [1.0],#[0, 64.0],  #[16,32,64,96,128]
+                "num_thermometer_dim": 0,
                 }
             },
         "task": {
