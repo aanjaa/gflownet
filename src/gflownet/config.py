@@ -43,6 +43,23 @@ class OptimizerConfig:
     clip_grad_param: float = 10.0
     adam_eps: float = 1e-8
 
+@dataclass
+class EvaluationConfig:
+    """ Configuration for evaluation
+    
+    Attributes
+    ----------
+    k : int
+        The number of top-k molecules or number of modes to evaluate on
+    reward_thresh : float
+        The reward threshold for calculating number of modes
+    tanimoto_thresh : float
+        The tanimoto threshold for getting distinct modes
+    """
+    k: int = 100
+    reward_thresh: float = 8.0
+    tanimoto_thresh: float = 0.7
+
 
 @dataclass
 class Config:
@@ -104,3 +121,4 @@ class Config:
     replay: ReplayConfig = ReplayConfig()
     task: TasksConfig = TasksConfig()
     cond: ConditionalsConfig = ConditionalsConfig()
+    evaluation: EvaluationConfig = EvaluationConfig()

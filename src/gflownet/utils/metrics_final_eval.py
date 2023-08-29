@@ -12,7 +12,7 @@ import os
 import glob
 
 
-def candidates_eval(path, k=100, thresh=0.7):
+def candidates_eval(path, k=100, reward_thresh=8, tanimoto_thresh=0.7):
     df = read_db_data_in_folder(path)
 
     df = df.drop_duplicates(subset=["smi"])
@@ -26,29 +26,32 @@ def candidates_eval(path, k=100, thresh=0.7):
     rewards = df["r"].tolist()
     mols = df["mol"].tolist()
 
-    candidates = list(zip(rewards, smiles, mols))
+    avg_topk = compute_avg_topk(rewards, k=k)
+
+    candidates = list(zip(rewards,mols))
     candidates = sorted(candidates, key=lambda m: m[0], reverse=True)
 
-    avg_topk = compute_avg_topk(rewards, k=k)
-    diverse_topk = compute_diverse_topk(candidates, k=k, thresh=thresh)
-    return {"avg_topk": avg_topk, "diverse_topk": diverse_topk}
+    avg_reward_in_topk_modes = compute_diverse_topk(candidates, k=k, tanimoto_thresh=tanimoto_thresh)
+    num_of_modes,num_candidates_above_reward_thresh = compute_num_of_modes(candidates, reward_thresh = reward_thresh, tanimoto_thresh=tanimoto_thresh)
+    return {"avg_topk": avg_topk, "avg_reward_in_topk_modes": avg_reward_in_topk_modes,"num_of_modes":num_of_modes, "max_reward":max(rewards),"num_candidates":len(candidates),"num_candidates_above_reward_thresh":num_candidates_above_reward_thresh}
 
 
 
-def compute_diverse_topk(candidates, k, thresh=0.7):
+def compute_diverse_topk(candidates, k=100, tanimoto_thresh=0.7):
     modes = [candidates[0]]
-    mode_fps = [Chem.RDKFingerprint(candidates[0][2])]
+    mode_fps = [Chem.RDKFingerprint(candidates[0][1])]
     for i in range(1, len(candidates)):
-        fp = Chem.RDKFingerprint(candidates[i][2])
+        fp = Chem.RDKFingerprint(candidates[i][1])
         sim = DataStructs.BulkTanimotoSimilarity(fp, mode_fps) 
         # if sim to any of the modes is less than thresh, add to modes
-        if max(sim) < thresh:
+        if max(sim) < tanimoto_thresh:
             modes.append(candidates[i])
             mode_fps.append(fp)
         if len(modes) >= k:
             # last_idx = i
             break
-    return np.mean([i[0] for i in modes])  # return sim
+    avg_reward_in_topk_modes = np.mean([i[0] for i in modes])  
+    return avg_reward_in_topk_modes 
 
 
 def compute_avg_topk(rewards,k):
@@ -58,6 +61,28 @@ def compute_avg_topk(rewards,k):
     topk_rewards = rewards[:k]
     # Return the mean of the top k rewards
     return np.mean(topk_rewards)
+
+def compute_num_of_modes(candidates, reward_thresh=8, tanimoto_thresh=0.7):
+    candidates = sorted(candidates, key=lambda m: m[0], reverse=True)
+    # cut of candidates with reward less than reward_thresh
+    candidates = [c for c in candidates if c[0] >= reward_thresh]
+
+    num_candidates_above_reward_thresh = len(candidates)
+    if num_candidates_above_reward_thresh == 0:
+        return 0, 0
+    
+    modes = [candidates[0]]
+    mode_fps = [Chem.RDKFingerprint(candidates[0][1])]
+    for i in range(1, len(candidates)):
+        fp = Chem.RDKFingerprint(candidates[i][1])
+        sim = DataStructs.BulkTanimotoSimilarity(fp, mode_fps) 
+        # if sim to any of the modes is less than thresh, add to modes
+        if max(sim) < tanimoto_thresh:
+            modes.append(candidates[i])
+            mode_fps.append(fp)
+
+    num_of_modes = len(modes)
+    return num_of_modes,num_candidates_above_reward_thresh
 
 
 def read_db_data_in_folder(folder_path: str) -> pd.DataFrame:

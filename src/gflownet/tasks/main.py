@@ -33,9 +33,10 @@ def main(hps,use_wandb=False):
     trial = Trainer(hps)
     info_final = trial.run()
     if trial.cfg.num_final_gen_steps > 0:
-        info_candidates = candidates_eval(path = hps["log_dir"]+"/final", k=hps["top_k"], thresh=0.7)
+        info_candidates = candidates_eval(path = trial.cfg.log_dir+"final", k=trial.cfg.evaluation.k, reward_thresh = trial.cfg.evaluation.reward_thresh, tanimoto_thresh=trial.cfg.evaluation.tanimoto_thresh)
         info_final = {**info_final,**info_candidates}
-    
+    trial.log(info_final, trial.cfg.num_training_steps)
+
     if use_wandb:
         wandb.log(prepend_keys(info_final,"final"))
         wandb.finish()
@@ -58,14 +59,14 @@ if __name__ == "__main__":
     task_name = "seh_frag" #"seh_frag"
 
     hps = {
-        "log_dir": f"./logs/debug_{task_name}/",
+        "log_dir": f"./logs/mol_eval_{task_name}/",
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 10, #10_000,
+        "num_training_steps": 2, #10_000,
         "print_every": 1,
         "validate_every":10,
         "num_workers": 5, 
-        "num_final_gen_steps": 160,
+        "num_final_gen_steps": 2,
         "top_k": 100,
         "opt": {
             "lr_decay": 20_000,
@@ -107,9 +108,9 @@ if __name__ == "__main__":
             #     "dist_params": [0, 64.0],
             #     }
             "temperature": {
-                "sample_dist": ["uniform"], #"discrete", #"uniform" #"constant"
-                "dist_params": [0, 64.0], #[16,32,64,96,128] ,#[0, 64.0] # [1.0]
-                "num_thermometer_dim": 32,
+                "sample_dist": "constant", #"discrete", #"uniform" #"constant"
+                "dist_params": [1.0], #[16,32,64,96,128] ,#[0, 64.0] # [1.0]
+                "num_thermometer_dim": 1,
                 },
             },
         "task": {
@@ -117,7 +118,12 @@ if __name__ == "__main__":
             "tdc": {
                 "oracle": "qed"
                 },
-            }
+            },
+        "evaluation": {
+            "k": 100,
+            "reward_thresh": 8.0,
+            "tanimoto_thresh": 0.7,
+            },
         }
     info_val = main(hps,use_wandb = False)
 

@@ -171,7 +171,6 @@ class SamplingIterator(IterableDataset):
         for idcs in self._idx_iterator():
             num_offline = idcs.shape[0]  # This is in [0, self.offline_batch_size]
             # Sample conditional info such as temperature, trade-off weights, etc.
-            print("num online", self.online_batch_size)
 
             if self.sample_cond_info:
                 num_online = self.online_batch_size

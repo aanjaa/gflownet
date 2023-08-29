@@ -172,7 +172,6 @@ if __name__ == "__main__":
         "num_training_steps": NUM_TRAINING_STEPS,#10_000,
         "num_workers": NUM_WORKERS,
         "num_final_gen_steps": 2, #Num final molecules = num_final_gen_steps*batch_size 
-        "top_k": 100, #For evaluation
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
@@ -243,6 +242,11 @@ if __name__ == "__main__":
             "tdc": {
                 "oracle": "qed"
                 }
+            },
+        "evaluation": {
+            "k": 100,
+            "reward_thresh": 8.0,
+            "tanimoto_thresh": 0.7,
             },
         }
 
