@@ -10,6 +10,7 @@ from rdkit import Chem
 from rdkit.DataStructs import BulkTanimotoSimilarity as Similarity
 from statistics import mean
 import copy
+import heapq
 
 
 class Trajectory:
@@ -75,16 +76,15 @@ class ReplayBuffer(object):
             elif self.insertion_strategy == "diversity":
                 """
                 Insert if x is not too similar (fixed threshold) to any element in the buffer (replace spot: randomly chosen).
-                Still make a replacement in case the new candidate has a higher reward than the most similar molecule (replace spot: most similar molecule).
                 """
                 max_sim,max_sim_idx = self.compute_max_sim_with_buffer(traj)
 
                 if max_sim < self.sim_thresh:
                         self.buffer[self.rng.choice(len(self.buffer))] = traj
-                else:
-                    # if the most similar molecule has a lower reward than the candidate molecule, replace it
-                    if traj.flat_reward > self.buffer[max_sim_idx].flat_reward:
-                        self.buffer[max_sim_idx] = traj
+                #else:
+                    #Still make a replacement in case the new candidate has a higher reward than the most similar molecule (replace spot: most similar molecule).
+                    # if traj.flat_reward > self.buffer[max_sim_idx].flat_reward:
+                    #     self.buffer[max_sim_idx] = traj
 
             elif self.insertion_strategy == "diversity_and_reward_fast":
                 """

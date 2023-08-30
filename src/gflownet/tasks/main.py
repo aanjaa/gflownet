@@ -112,7 +112,7 @@ if __name__ == "__main__":
                 },
             },
         "task": {
-            "name": "tdc_frag", 
+            "name": "seh_frag", 
             "tdc": {
                 "oracle": 'sa',
                 },

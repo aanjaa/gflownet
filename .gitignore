@@ -147,3 +147,6 @@ oracle/
 
 # Bash scripts
 bash/
+
+#Slurm output scripts
+*.out
