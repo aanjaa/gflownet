@@ -35,20 +35,20 @@ def main(hps,use_wandb=False):
     if trial.cfg.num_final_gen_steps > 0:
         info_candidates = candidates_eval(path = trial.cfg.log_dir+"final", k=trial.cfg.evaluation.k, reward_thresh = trial.cfg.evaluation.reward_thresh, tanimoto_thresh=trial.cfg.evaluation.tanimoto_thresh)
         info_final = {**info_final,**info_candidates}
-    trial.log(info_final, trial.cfg.num_training_steps)
 
     if use_wandb:
         wandb.log(prepend_keys(info_final,"final"))
         wandb.finish()
     
-    #print(info_final)
+    print("\n\nFinal results:\n")
+    print(info_final)
     return info_final
 
 
 def get_Trainer(hps) -> Union[SEHFragTrainer, TDCFragTrainer]:
     if hps["task"]["name"] == "seh_frag":
         return SEHFragTrainer
-    elif hps["task"]["name"] == "tdc_frag":
+    elif hps["task"]["name"] in ["tdc_frag"]:
         return TDCFragTrainer
     else:
         raise ValueError(f"Unknown task!")
@@ -56,16 +56,14 @@ def get_Trainer(hps) -> Union[SEHFragTrainer, TDCFragTrainer]:
 
 if __name__ == "__main__":
 
-    task_name = "seh_frag" #"seh_frag"
-
     hps = {
-        "log_dir": f"./logs/mol_eval_{task_name}/",
+        "log_dir": f"./logs/mol_eval/",
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
         "num_training_steps": 2, #10_000,
         "print_every": 1,
         "validate_every":10,
-        "num_workers": 5, 
+        "num_workers": 8, 
         "num_final_gen_steps": 2,
         "top_k": 100,
         "opt": {
@@ -114,9 +112,9 @@ if __name__ == "__main__":
                 },
             },
         "task": {
-            "name": task_name, 
+            "name": "tdc_frag", 
             "tdc": {
-                "oracle": "qed"
+                "oracle": 'sa',
                 },
             },
         "evaluation": {

@@ -1,0 +1,13 @@
+[=== Module python/3.9 loaded ===]
+[=== Module cudatoolkit/11.7 loaded ===]
+2023-08-30 00:19:15,296	INFO worker.py:1612 -- Started a local Ray instance. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+2023-08-30 00:19:17,290	INFO tune.py:666 -- [output] This will use the new output engine with verbosity 2. To disable the new output and use the legacy output engine, set the environment variable RAY_AIR_NEW_OUTPUT=0. For more information, please see https://github.com/ray-project/ray/issues/36949
+[2m[36m(func pid=33658)[0m wandb: Currently logged in as: any. Use `wandb login --relogin` to force relogin
+[2m[36m(func pid=33658)[0m wandb: wandb version 0.15.9 is available!  To upgrade, please run:
+[2m[36m(func pid=33658)[0m wandb:  $ pip install wandb --upgrade
+[2m[36m(func pid=33658)[0m wandb: Tracking run with wandb version 0.15.8
+[2m[36m(func pid=33658)[0m wandb: Run data is saved locally in /home/mila/a/anja.surina/gflownet/logs/training_objectives_trial_sa/seh_frag_TB/details/main_62659_00000_0_Z_learning_rate=0.0010,Z_lr_decay=20000,learning_rate=0.0000,lr_decay=20000_2023-08-30_00-19-17/wandb/run-20230830_001941-2c36x83c
+[2m[36m(func pid=33658)[0m wandb: Run `wandb offline` to turn off syncing.
+[2m[36m(func pid=33658)[0m wandb: Syncing run seh_frag_TB
+[2m[36m(func pid=33658)[0m wandb: ⭐️ View project at https://wandb.ai/any/training_objectives_trial_sa
+[2m[36m(func pid=33658)[0m wandb: 🚀 View run at https://wandb.ai/any/training_objectives_trial_sa/runs/2c36x83c

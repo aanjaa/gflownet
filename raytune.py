@@ -14,26 +14,10 @@ import torch
 import ray
 from gflownet.utils.misc import replace_dict_key,change_config, get_num_cpus
 from gflownet.algo.config import TBVariant
+from ray.tune.schedulers import ASHAScheduler
 
 #Global main 
 from gflownet.tasks.main import main
-
-NUM_GPUS = 1
-GROUP_FACTORY = tune.PlacementGroupFactory([{'CPU': 2.0, 'GPU': 0.25}])
-NUM_WORKERS = 2
-
-FOLDER_NAME = "logs_debug"
-NUM_SAMPLES = 16
-NUM_TRAINING_STEPS = 10_000 #10_000
-VALIDATE_EVERY = 1000 #1000
-
-METRIC = "val_loss"
-MODE = "min"   
-
-TASKS = ['seh_frag', 'tdc_frag']             
-ORACLES = ['qed','gsk3b','drd2','sa'] 
-METHOD_NAMES =  ["TB", "FM", "SubTB1", "DB"]
-
 
 def run_raytune(search_space):
 
@@ -53,17 +37,27 @@ def run_raytune(search_space):
     # Save the search space by saving this file itself
     shutil.copy(__file__, os.path.join(search_space["log_dir"] + "/ray.py"))
 
+    # asha_scheduler = ASHAScheduler(
+    # time_attr='training_iteration',
+    # metric='loss',
+    # mode='min',
+    # max_t=100,
+    # grace_period=10,
+    # reduction_factor=3,
+    # brackets=1,
+    # )
+
     tuner = tune.Tuner(
         tune.with_resources(
             functools.partial(main,use_wandb=True),
-            resources=GROUP_FACTORY),
+            resources=group_factory),
         #functools.partial(main,use_wandb=True),
         param_space=search_space,
         tune_config=tune.TuneConfig(
-            metric=METRIC,
-            mode=MODE,
-            num_samples=NUM_SAMPLES,
-            # scheduler=tune.schedulers.ASHAScheduler(grace_period=10),
+            metric=metric,
+            mode=mode,
+            num_samples=num_samples,
+            # scheduler=asha_scheduler,
             search_alg=BasicVariantGenerator(constant_grid_search=True),
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
             # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
@@ -100,7 +94,7 @@ def run_raytune(search_space):
                 continue
 
             file.write(
-                f"Trial #{i} finished successfully with a {METRIC} metric of: {result.metrics[METRIC]} \n")
+                f"Trial #{i} finished successfully with a {metric} metric of: {result.metrics[metric]} \n")
 
 
     config = results.get_best_result().config
@@ -131,13 +125,38 @@ def convert_training_obj(training_objective):
     return method, method_name, variant
 
 
+def convert_task(task):
+    if task == "seh_frag":
+        task_name = "seh_frag"
+        oracle = "qed"
+
+    elif task  == 'qed_frag':
+        task_name = "tdc_frag"
+        oracle = "qed"
+
+    elif task == 'gsk3_frag':
+        task_name = "tdc_frag"
+        oracle = "gsk3"
+
+    elif task == 'drd2_frag':
+        task_name = "tdc_frag"
+        oracle = "drd2"
+
+    elif task == 'sa_frag':
+        task_name = "tdc_frag"
+        oracle = "sa"
+    else:
+        raise ValueError(f"Task {task} not supported")
+    return task_name,oracle
+
+
 if __name__ == "__main__":
 
-    # parser = ArgumentParser()
-    # parser.add_argument("--experiment_name", type=str,
-    #                     default="searchspaces_losses") #["reward_losses", "smoothness_losses", ["searchspaces_losses"], ["replay_and_capacity"], ["exploration_strategies"]][-3]
-    # parser.add_argument("--folder", type=str, default="logs_debug")
-    # args = parser.parse_args()
+    parser = ArgumentParser()
+    parser.add_argument("--experiment_name", type=str,
+                        default="training_objectives") 
+    parser.add_argument("--idx", type=int, default=0, help ="Run number in an experiment") 
+    args = parser.parse_args()
 
     #folder_name = args.folder
 
@@ -154,24 +173,44 @@ if __name__ == "__main__":
     #     num_gpus = 0
     # print(f"num_cpus: {num_cpus}, num_gpus: {num_gpus}")
 
+    batch_experiment_name = "trial_sa" #+ time.strftime("%d.%m_%H:%M:%S")
+    folder_name = "logs"
+
+    num_gpus = 1
+    group_factory = tune.PlacementGroupFactory([{'CPU': 8.0, 'GPU': 1.0}])
+    num_workers = 7
+
+    num_samples = 1
+    num_training_steps = 15_625 #10_000
+    validate_every = 1000 #1000
+
+    metric = "val_loss"
+    mode = "min"   
+
+    training_objectives =  ["TB", "FM", "SubTB1", "DB"]
+    tasks = ['seh_frag','qed_frag','drd2_frag','sa_frag']
+
+    #tasks = ['seh_frag', 'tdc_frag']             
+    #oracles = ['qed','drd2','sa'] 
+
     ray.init(
         num_cpus=get_num_cpus(), #num_cpus,#8, #num_cpus,
-        num_gpus=NUM_GPUS, # num_gpus #2 #num_gpus,
+        num_gpus=num_gpus, # num_gpus #2 #num_gpus,
     )
 
-    print(f"Number of cpus: {get_num_cpus()}, number of gpus: {NUM_GPUS}")
-    print(f"Placement group factory: {GROUP_FACTORY}")
-    print(f"Number of workers: {NUM_WORKERS}")
+    print(f"Number of cpus: {get_num_cpus()}, number of gpus: {num_gpus}")
+    print(f"Placement group factory: {group_factory}")
+    print(f"Number of workers: {num_workers}")
 
     config = {
         "log_dir": f"./logs/debug_raytune",
-        "device": "cuda" if bool(NUM_GPUS) else "cpu",
+        "device": "cuda" if bool(num_gpus) else "cpu",
         "seed": 0, # TODO: how is seed handled?
-        "validate_every": VALIDATE_EVERY,#1000,
+        "validate_every": validate_every,#1000,
         "print_every": 10,
-        "num_training_steps": NUM_TRAINING_STEPS,#10_000,
-        "num_workers": NUM_WORKERS,
-        "num_final_gen_steps": 2, #Num final molecules = num_final_gen_steps*batch_size 
+        "num_training_steps": num_training_steps,#10_000,
+        "num_workers": num_workers,
+        "num_final_gen_steps": 2,
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
@@ -210,17 +249,17 @@ if __name__ == "__main__":
             "adam_eps": 1e-8,
             },
         "replay": {
-            "use": True,
+            "use": False,
             "capacity": 100,
             "warmup": 100,
             "hindsight_ratio": 0.0,
             "insertion": {
-                "strategy": "diversity",#"diversity_and_reward_fast",
+                "strategy": "fifo",#"diversity_and_reward_fast",
                 "sim_thresh": 0.7,
                 "reward_thresh": 0.9,
                 },
             "sampling":{
-                "strategy": "weighted",
+                "strategy": "uniform",
                 "weighted": {
                     "reward_power": 1.0,
                     },
@@ -234,7 +273,7 @@ if __name__ == "__main__":
             "temperature": {
                 "sample_dist": "constant", #"uniform"
                 "dist_params": [1.0],#[0, 64.0],  #[16,32,64,96,128]
-                "num_thermometer_dim": 0,
+                "num_thermometer_dim": 1,
                 }
             },
         "task": {
@@ -256,34 +295,33 @@ if __name__ == "__main__":
     Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000])
 
     search_spaces = []
-    experiment_name = "training_objectives"
 
-    for task in ['seh_frag']: 
-        for training_objective in ["FM"]: #["TB", "FM", "SubTB", "DB"]:
+    if args.experiment_name == "training_objectives":
+        for task in tasks: #["sa_frag"]: #tasks:
+            for training_objective in training_objectives:
 
-            name = f"{task}_{training_objective}"
+                name = f"{task}_{training_objective}"
 
-            method,method_name,variant = convert_training_obj(training_objective)
-            
-            replay_use = False
+                method,method_name,variant = convert_training_obj(training_objective)
+                task_name, oracle = convert_task(task)
 
-            changes_config = {
-                "log_dir": f"./{FOLDER_NAME}/{experiment_name}/{name}",
-                "opt.lr_decay": lr_decay,
-                "opt.learning_rate": learning_rate,
-                "algo.tb.Z_learning_rate": Z_learning_rate,
-                "algo.tb.Z_lr_decay": Z_lr_decay,
-                "algo.method": method,
-                "algo.method_name": method_name,
-                "algo.tb.variant": variant,
-                "replay.use": replay_use,
-                "task.name": task,
-                "task.tdc.oracle": "qed"
-                }
-            
-            search_space = change_config(copy.deepcopy(config), changes_config)
+                changes_config = {
+                    "log_dir": f"./{folder_name}/{args.experiment_name}_{batch_experiment_name}/{name}",
+                    "opt.lr_decay": lr_decay,
+                    "opt.learning_rate": learning_rate,
+                    "algo.tb.Z_learning_rate": Z_learning_rate,
+                    "algo.tb.Z_lr_decay": Z_lr_decay,
+                    "algo.method": method,
+                    "algo.method_name": method_name,
+                    "algo.tb.variant": variant,
+                    "task.name": task_name,
+                    "task.tdc.oracle": oracle,
+                    }
+                
+                search_spaces.append(change_config(copy.deepcopy(config), changes_config)) 
 
-            run_raytune(search_space)
+        print(f"Running run number {args.idx} out of {len(search_spaces)}")
+        run_raytune(search_spaces[args.idx])
 
             #try:
             #    run_raytune(search_space,metric,num_samples)

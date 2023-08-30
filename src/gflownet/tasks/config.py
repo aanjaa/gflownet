@@ -62,7 +62,7 @@ class TDCTaskConfig:
 
 @dataclass
 class TasksConfig:
-    name: str = "seh"
+    name: str = "seh_frag"
     qm9: QM9TaskConfig = QM9TaskConfig()
     seh: SEHTaskConfig = SEHTaskConfig()
     seh_moo: SEHMOOTaskConfig = SEHMOOTaskConfig()

@@ -1,0 +1,16 @@
+[=== Module python/3.9 loaded ===]
+[=== Module cudatoolkit/11.7 loaded ===]
+2023-08-30 00:19:07,342	INFO worker.py:1612 -- Started a local Ray instance. View the dashboard at [1m[32m127.0.0.1:8266 [39m[22m
+2023-08-30 00:19:09,252	INFO tune.py:666 -- [output] This will use the new output engine with verbosity 2. To disable the new output and use the legacy output engine, set the environment variable RAY_AIR_NEW_OUTPUT=0. For more information, please see https://github.com/ray-project/ray/issues/36949
+[2m[36m(func pid=2762416)[0m wandb: Currently logged in as: any. Use `wandb login --relogin` to force relogin
+[2m[36m(func pid=2762416)[0m wandb: ERROR Error while calling W&B API: An internal error occurred. Please contact support. (<Response [500]>)
+[2m[36m(func pid=2762416)[0m wandb: - Waiting for wandb.init()...
+[2m[36m(func pid=2762416)[0m wandb: \ Waiting for wandb.init()...
+[2m[36m(func pid=2762416)[0m wandb: wandb version 0.15.9 is available!  To upgrade, please run:
+[2m[36m(func pid=2762416)[0m wandb:  $ pip install wandb --upgrade
+[2m[36m(func pid=2762416)[0m wandb: Tracking run with wandb version 0.15.8
+[2m[36m(func pid=2762416)[0m wandb: Run data is saved locally in /home/mila/a/anja.surina/gflownet/logs/training_objectives_trial_sa/seh_frag_FM/details/main_5da0b_00000_0_Z_learning_rate=0.0100,Z_lr_decay=100000,learning_rate=0.0001,lr_decay=1000_2023-08-30_00-19-09/wandb/run-20230830_001924-qhwtdk5e
+[2m[36m(func pid=2762416)[0m wandb: Run `wandb offline` to turn off syncing.
+[2m[36m(func pid=2762416)[0m wandb: Syncing run seh_frag_FM
+[2m[36m(func pid=2762416)[0m wandb: ⭐️ View project at https://wandb.ai/any/training_objectives_trial_sa
+[2m[36m(func pid=2762416)[0m wandb: 🚀 View run at https://wandb.ai/any/training_objectives_trial_sa/runs/qhwtdk5e

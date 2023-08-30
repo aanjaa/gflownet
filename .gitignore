@@ -145,5 +145,5 @@ launch.json
 
 oracle/
 
-
-
+# Bash scripts
+bash/

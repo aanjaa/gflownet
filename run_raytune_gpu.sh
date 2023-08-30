@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=sehFM
+#SBATCH --job-name=raytune
 #SBATCH --partition=long
 #SBATCH --gres=gpu:2           
 #SBATCH --cpus-per-task=8           
