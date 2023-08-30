@@ -63,37 +63,20 @@ class ReplayBuffer(object):
 
             if self.insertion_strategy in  ["reward","diversity_and_reward"]:
                 heapq.heappush(self.buffer, (traj.flat_reward,traj))
-            
-            #elif self.insertion_strategy == "diversity":
-                #generate a random number between 0 nd 1
-                # self.rng.random()
-                # rand_int = self.rng.randint(0,self.capacity)
-                # heapq.heappush(self.buffer, (-1,traj))
-        
 
-            # self.buffer.append(None)
-            # self.buffer[self.position] = traj
-            # self.position = (self.position + 1) % self.capacity
-
-            # If buffer is full, insert according to insertion strategy
+        # If buffer is full, insert according to insertion strategy
         else:
             if self.insertion_strategy == "fifo":
                 heapq.heapreplace(self.buffer, (self.position, traj))
                 self.position += 1
-
-                # self.buffer[self.position] = traj
-                # self.position = (self.position + 1) % self.capacity
 
             elif self.insertion_strategy == "reward":
                 """
                 Every inserted x increases the lowest reward of the buffer.
                 Replace spot: lowest reward element
                 """
-                #flat rewards are not transformed with cond info
                 if traj.flat_reward > self.buffer[0][0]:
                     heapq.heapreplace(self.buffer, (traj.flat_reward,traj))
-                # if traj.flat_reward > self.min_reward:
-                #     self.buffer[self.min_reward_idx] = traj
 
             elif self.insertion_strategy == "diversity":
                 """
@@ -104,11 +87,7 @@ class ReplayBuffer(object):
                 if max_sim < self.sim_thresh:
                     rand_int = self.rng.integers(self.capacity)
                     self.buffer[rand_int] = (rand_int,traj)
-                
-                #else:
-                    #Still make a replacement in case the new candidate has a higher reward than the most similar molecule (replace spot: most similar molecule).
-                    # if traj.flat_reward > self.buffer[max_sim_idx].flat_reward:
-                    #     self.buffer[max_sim_idx] = traj
+    
 
             elif self.insertion_strategy == "diversity_and_reward":
                 """
@@ -119,24 +98,7 @@ class ReplayBuffer(object):
 
                 if max_sim < self.sim_thresh and traj.flat_reward > self.buffer[0][0]:
                     heapq.heapreplace(self.buffer, (traj.flat_reward,traj))
-
-                # if max_sim < self.sim_thresh and traj.flat_reward > self.min_reward:
-                #         self.buffer[self.min_reward_idx] = traj
-
-            # Takes too long time
-            # elif self.insertion_strategy == "diversity_and_reward":
-            #     """
-            #     Every inserted x satisfies two criteria: it increases the lowest reward (unless the lowest reward is above a threshold) AND decreases the max similarity between any two elements in the buffer (unless all elements are already diverse enough).
-            #     Replace spot: randomly chosen between element with lowest reward and element with highest similarity
-            #     """
-            #     max_sim,max_sim_idx = self.compute_max_sim_with_buffer(traj)
-            #     max_sim_buffer, max_sim_buffer_idx = self.compute_max_max_sim_within_buffer()
-
-            #     if traj.flat_reward > min(self.min_reward,self.reward_thresh) and max_sim < max(max_sim_buffer,self.sim_thresh):
-            #         if self.rng.random() < 0.5:
-            #             self.buffer[self.min_reward_idx] = traj
-            #         else:
-            #             self.buffer[max_sim_buffer_idx] = traj                
+             
             else:
                 raise NotImplementedError
             
@@ -159,11 +121,6 @@ class ReplayBuffer(object):
     def avg_reward(self):
         flat_rewards = torch.stack([traj.flat_reward for (_,traj) in self.buffer])
         return torch.mean(flat_rewards)
-    
-    # @property
-    # def min_reward_idx(self):
-    #     flat_rewards = torch.stack([traj.flat_reward for traj in self.buffer])
-    #     return torch.argmin(flat_rewards)
 
     def compute_simlarities_within_buffer(self):
         """
@@ -185,16 +142,6 @@ class ReplayBuffer(object):
 
         return avg_sim_list, max_sim_list, min_sim_list
     
-    # def compute_max_max_sim_within_buffer(self):
-    #     """
-    #     Finds the molecule with the highest tanimoto similarity to any other molecule in the buffer.
-    #     Returns max_sim of that molecule and its index
-    #     """
-    #     avg_sim_list, max_sim_list, min_sim_list = self.compute_simlarities_within_buffer()
-    #     max_max_sim = max(max_sim_list)
-    #     max_max_sim_idx = max_sim_list.index(max_max_sim)
-    #     return max_max_sim, max_max_sim_idx
-
     
     def get_buffer_stats(self):
         avg_sim_list, max_sim_list, min_sim_list = self.compute_simlarities_within_buffer()
@@ -245,17 +192,6 @@ class ReplayBuffer(object):
         replay_valid = torch.stack([self.buffer[idx][1].is_valid for idx in idxs])
 
         return replay_trajs, replay_logr, replay_fr, replay_condinfo, replay_valid
-
-        # out = list(zip(*[self.buffer[idx] for idx in idxs]))
-        # for i in range(len(out)):
-        #     # stack if all elements are numpy arrays or torch tensors
-        #     # (this is much more efficient to send arrays through multiprocessing queues)
-        #     if all([isinstance(x, np.ndarray) for x in out[i]]):
-        #         out[i] = np.stack(out[i], axis=0)
-        #     elif all([isinstance(x, torch.Tensor) for x in out[i]]):
-        #         out[i] = torch.stack(out[i], dim=0)
-
-        # return tuple(out) #replay_trajs, replay_logr, replay_fr, replay_condinfo, replay_valid
 
     def __len__(self):
         return len(self.buffer)
