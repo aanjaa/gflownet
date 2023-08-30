@@ -108,7 +108,6 @@ class Config:
     print_every: int = 100
     start_at_step: int = 0
     num_final_gen_steps: Optional[int] = None
-    top_k: int = 100
     num_training_steps: int = 10_000
     num_workers: int = 0
     hostname: Optional[str] = None

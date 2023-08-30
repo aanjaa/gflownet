@@ -14,10 +14,13 @@ from gflownet.tasks.tdc_frag import TDCFragTrainer
 from gflownet.config import Config
 from gflownet.algo.config import TBVariant
 import torch
-
+import time
 
 def main(hps,use_wandb=False):
     # hps must contain task.name, log_dir, overwrite_existing_exp
+
+    #Measuring time
+    start_time = time.time()
 
     if use_wandb:
         wandb.init(project=hps["log_dir"].split("/")[-2],name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
@@ -42,6 +45,8 @@ def main(hps,use_wandb=False):
     
     print("\n\nFinal results:\n")
     print(info_final)
+
+    print("\n\nTime elapsed: ", time.time()-start_time)
     return info_final
 
 
@@ -60,12 +65,11 @@ if __name__ == "__main__":
         "log_dir": f"./logs/mol_eval/",
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 2, #10_000,
+        "num_training_steps": 10, #10_000,
         "print_every": 1,
-        "validate_every":10,
+        "validate_every":100,
         "num_workers": 8, 
-        "num_final_gen_steps": 2,
-        "top_k": 100,
+        "num_final_gen_steps": 1,
         "opt": {
             "lr_decay": 20_000,
             },
@@ -80,17 +84,17 @@ if __name__ == "__main__":
                 },
             },
         "replay": {
-            "use": False,
-            "capacity": 200,
-            "warmup": 100,
+            "use": True,
+            "capacity": 100 ,#100,
+            "warmup": 10, #10,
             "hindsight_ratio": 0.0,
             "insertion": {
-                "strategy": "reward",#"diversity_and_reward_fast",
+                "strategy": "diversity_and_reward",#"diversity_and_reward_fast",
                 "sim_thresh": 0.7,
                 "reward_thresh": 0.9,
                 },
             "sampling":{
-                "strategy": "weighted",
+                "strategy": "quantile",
                 "weighted": {
                     "reward_power": 1.0,
                     },
@@ -118,7 +122,7 @@ if __name__ == "__main__":
                 },
             },
         "evaluation": {
-            "k": 100,
+            "k": 10,
             "reward_thresh": 8.0,
             "tanimoto_thresh": 0.7,
             },
