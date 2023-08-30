@@ -173,7 +173,7 @@ if __name__ == "__main__":
     #     num_gpus = 0
     # print(f"num_cpus: {num_cpus}, num_gpus: {num_gpus}")
 
-    batch_experiment_name = "trial_sa" #+ time.strftime("%d.%m_%H:%M:%S")
+    batch_experiment_name = "trial" #+ time.strftime("%d.%m_%H:%M:%S")
     folder_name = "logs"
 
     num_gpus = 1
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     num_workers = 7
 
     num_samples = 1
-    num_training_steps = 15_625 #10_000
+    num_training_steps = 15_650 #10_000
     validate_every = 1000 #1000
 
     metric = "val_loss"
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         "print_every": 10,
         "num_training_steps": num_training_steps,#10_000,
         "num_workers": num_workers,
-        "num_final_gen_steps": 2,
+        "num_final_gen_steps": 320,
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
