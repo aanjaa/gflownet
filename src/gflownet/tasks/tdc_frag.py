@@ -103,9 +103,9 @@ class TDCFragTrainer(StandardOnlineTrainer):
         cfg.opt.lr_decay = 20_000
         cfg.opt.clip_grad_type = "norm"
         cfg.opt.clip_grad_param = 10
-        cfg.algo.global_batch_size = 64
+        #cfg.algo.global_batch_size = 64
 
-        cfg.algo.offline_ratio = 0
+        #cfg.algo.offline_ratio = 0
 
         cfg.model.num_emb = 128
         cfg.model.num_layers = 4
@@ -120,7 +120,7 @@ class TDCFragTrainer(StandardOnlineTrainer):
         cfg.algo.train_random_action_prob = 0.0
         cfg.algo.valid_random_action_prob = 0.0
 
-        cfg.algo.valid_offline_ratio = 0
+        #fg.algo.valid_offline_ratio = 0
 
         cfg.algo.tb.epsilon = None
 

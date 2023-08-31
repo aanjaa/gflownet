@@ -33,9 +33,10 @@ class SamplingIterator(IterableDataset):
         algo,
         task,
         device,
-        batch_size: int = 1,
+        online_batch_size: int = 1,
+        offline_batch_size: int = 0,
+        replay_batch_size: int = 0,
         illegal_action_logreward: float = -50,
-        ratio: float = 0.5,
         stream: bool = True,
         replay_buffer: ReplayBuffer = None,
         log_dir: str = None,
@@ -61,9 +62,14 @@ class SamplingIterator(IterableDataset):
             The device the model is on
         replay_buffer: ReplayBuffer
             The replay buffer for training on past data
-        batch_size: int
-            The number of trajectories, each trajectory will be comprised of many graphs, so this is
-            _not_ the batch size in terms of the number of graphs (that will depend on the task)
+        online_batch_size: int
+            The number of trajectories to sample from the model.
+            Note about all batch_sizes: each trajectory will be comprised of many graphs, so this is
+            _not_ the batch size in terms of the number of graphs (that will depend on the task).
+        replay batch_size: int
+            The number of trajectories to sample from the replay buffer.
+        offline_batch_size: int
+            The number of trajectories to sample from the dataset.
         illegal_action_logreward: float
             The logreward for invalid trajectories
         ratio: float
@@ -84,11 +90,12 @@ class SamplingIterator(IterableDataset):
         self.data = dataset
         self.model = model
         self.replay_buffer = replay_buffer
-        self.batch_size = batch_size
+
+        self.replay_batch_size = replay_batch_size
+        self.offline_batch_size = offline_batch_size
+        self.online_batch_size = online_batch_size
+
         self.illegal_action_logreward = illegal_action_logreward
-        self.offline_batch_size = int(np.ceil(self.batch_size * ratio))
-        self.online_batch_size = int(np.floor(self.batch_size * (1 - ratio)))
-        self.ratio = ratio
         self.ctx = ctx
         self.algo = algo
         self.task = task
@@ -106,7 +113,7 @@ class SamplingIterator(IterableDataset):
         # then "offline" now refers to cond info and online to x, so no duplication and we don't end
         # up with 2*batch_size accidentally
         if not sample_cond_info:
-            self.offline_batch_size = self.online_batch_size = self.batch_size
+            self.offline_batch_size = self.online_batch_size = self.offline_batch_size + self.online_batch_size
 
         # This SamplingIterator instance will be copied by torch DataLoaders for each worker, so we
         # don't want to initialize per-worker things just yet, such as where the log the worker writes
@@ -271,8 +278,7 @@ class SamplingIterator(IterableDataset):
 
             if self.replay_buffer is not None:
                 # If we have a replay buffer, we push the online trajectories in it
-                # and resample immediately such that the "online" data in the batch
-                # comes from a more stable distribution (try to avoid forgetting)
+                # and sample replay_batch_size of them to add to the batch
 
                 # cond_info is a dict, so we need to convert it to a list of dicts
                 cond_info = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
@@ -287,15 +293,15 @@ class SamplingIterator(IterableDataset):
                         deepcopy(is_valid[i]),
                     )
                 replay_trajs, replay_logr, replay_fr, replay_condinfo, replay_valid = self.replay_buffer.sample(
-                    num_online
+                    self.replay_batch_size
                 )
 
-                # append the online trajectories to the offline ones
-                trajs[num_offline:] = replay_trajs
-                log_rewards[num_offline:] = replay_logr
-                flat_rewards[num_offline:] = replay_fr
-                cond_info[num_offline:] = replay_condinfo
-                is_valid[num_offline:] = replay_valid
+                # # append the replay batch to the offline + online batch
+                trajs += replay_trajs
+                log_rewards = torch.cat([log_rewards, replay_logr])
+                flat_rewards = torch.cat([flat_rewards, replay_fr])
+                cond_info += replay_condinfo
+                is_valid = torch.cat([is_valid, replay_valid])
 
                 # convert cond_info back to a dict
                 cond_info = {k: torch.stack([d[k] for d in cond_info]) for k in cond_info[0]}

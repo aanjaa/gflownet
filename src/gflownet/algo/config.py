@@ -90,8 +90,12 @@ class AlgoConfig:
     ----------
     method : str
         The name of the algorithm to use (e.g. "TB")
-    global_batch_size : int
-        The batch size for training
+    online_batch_size : int
+        The batch size sampled from the model.
+    replay_batch_size : int
+        The batch size sampled from the replay buffer.
+    offline_batch_size : int
+        The batch size sampled from the offline dataset.
     max_len : int
         The maximum length of a trajectory
     max_nodes : int
@@ -100,11 +104,6 @@ class AlgoConfig:
         The maximum number of edges in a generated graph
     illegal_action_logreward : float
         The log reward an agent gets for illegal actions
-    offline_ratio: float
-        The ratio of samples drawn from `self.training_data` during training. The rest is drawn from
-        `self.sampling_model`
-    valid_offline_ratio: float
-        Idem but for validation, and `self.test_data`.
     train_random_action_prob : float
         The probability of taking a random action during training
     valid_random_action_prob : float
@@ -117,13 +116,13 @@ class AlgoConfig:
 
     method: str = "TB"
     method_name : str = "TB"
-    global_batch_size: int = 64
+    online_batch_size: int = 64
+    replay_batch_size: int = 0
+    offline_batch_size: int = 0
     max_len: int = 128
     max_nodes: int = 128
     max_edges: int = 128
     illegal_action_logreward: float = -100
-    offline_ratio: float = 0.5
-    valid_offline_ratio: float = 1
     train_random_action_prob: float = 0.0
     valid_random_action_prob: float = 0.0
     valid_sample_cond_info: bool = True

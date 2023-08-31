@@ -229,10 +229,11 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
-            batch_size=self.cfg.algo.global_batch_size,
+            online_batch_size=self.cfg.algo.online_batch_size,
+            replay_batch_size=self.cfg.algo.replay_batch_size,
+            offline_batch_size=self.cfg.algo.offline_batch_size,
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
             replay_buffer=replay_buffer,
-            ratio=self.cfg.algo.offline_ratio,
             log_dir=str(pathlib.Path(self.cfg.log_dir) / "train"),
             random_action_prob=self.cfg.algo.train_random_action_prob,
             hindsight_ratio=self.cfg.replay.hindsight_ratio,
@@ -258,9 +259,11 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
-            batch_size=self.cfg.algo.global_batch_size,
+            online_batch_size=self.cfg.algo.online_batch_size,
+            replay_batch_size=0,
+            offline_batch_size=self.cfg.algo.offline_batch_size,
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
-            ratio=self.cfg.algo.valid_offline_ratio,
+            replay_buffer=None,
             log_dir=str(pathlib.Path(self.cfg.log_dir) / "valid"),
             sample_cond_info=self.cfg.algo.valid_sample_cond_info,
             stream=False,
@@ -279,17 +282,19 @@ class GFNTrainer:
     def build_final_data_loader(self) -> DataLoader:
         model, dev = self._wrap_for_mp(self.sampling_model, send_to_device=True)
         iterator = SamplingIterator(
-            self.training_data,
+            [], #changed
             model,
             self.ctx,
             self.algo,
             self.task,
             dev,
-            batch_size=self.cfg.algo.global_batch_size,
+            online_batch_size=self.cfg.algo.online_batch_size,
+            replay_batch_size=0,
+            offline_batch_size=0,
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
             replay_buffer=None,
-            ratio=0.0,
             log_dir=os.path.join(self.cfg.log_dir, "final"),
+            sample_cond_info=self.cfg.algo.valid_sample_cond_info, #changed
             random_action_prob=0.0,
             hindsight_ratio=0.0,
             init_train_iter=self.cfg.num_training_steps,
@@ -392,7 +397,6 @@ class GFNTrainer:
                 pass
             logger.info("Final generation steps completed.")
 
-        #wandb.finish()
         return info_val
 
     def _save_state(self, it):

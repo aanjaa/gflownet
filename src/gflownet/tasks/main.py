@@ -67,7 +67,7 @@ if __name__ == "__main__":
         "overwrite_existing_exp": True,
         "num_training_steps": 10, #10_000,
         "print_every": 1,
-        "validate_every":100,
+        "validate_every":1,
         "num_workers": 8, 
         "num_final_gen_steps": 1,
         "opt": {
@@ -77,7 +77,10 @@ if __name__ == "__main__":
             "method": "TB",
             "method_name": "TB",
             "sampling_tau": 0.99,
-            "global_batch_size": 128, #64,
+            "online_batch_size": 64,
+            "replay_batch_size": 32,
+            "offline_batch_size": 0,
+            "valid_sample_cond_info": False,
             "tb": {
                 "do_length_normalize": False, ###TODO
                 "variant": TBVariant.DB,
