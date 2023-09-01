@@ -158,40 +158,25 @@ if __name__ == "__main__":
     parser.add_argument("--idx", type=int, default=0, help ="Run number in an experiment") 
     args = parser.parse_args()
 
-    #folder_name = args.folder
 
-    # num_cpus = get_num_cpus()
-    # if use_gpus:
-    #     if torch.cuda.is_available():
-    #         #num_gpus = torch.cuda.device_count() #this doesn't always work on the cluster
-    #         num_gpus = num_gpus
-    #     else:
-    #         print("No GPUs available")
-    #         num_gpus = 0
-        
-    # else:
-    #     num_gpus = 0
-    # print(f"num_cpus: {num_cpus}, num_gpus: {num_gpus}")
+    batch_experiment_name = "debug" #+ time.strftime("%d.%m_%H:%M:%S")
+    folder_name = "logs_debug"
 
-    batch_experiment_name = "trial" #+ time.strftime("%d.%m_%H:%M:%S")
-    folder_name = "logs"
-
-    num_gpus = 1
+    num_gpus = 1 #torch.cuda.device_count() #this doesn't always work on the cluster
     group_factory = tune.PlacementGroupFactory([{'CPU': 8.0, 'GPU': 1.0}])
     num_workers = 7
 
     num_samples = 1
-    num_training_steps = 15_650 #10_000
-    validate_every = 1000 #1000
+    num_training_steps = 1#15_650 #10_000
+    validate_every = 1 # 1000 #1000
+    num_final_gen_steps = 1 #320
 
     metric = "val_loss"
     mode = "min"   
 
     training_objectives =  ["TB", "FM", "SubTB1", "DB"]
-    tasks = ['seh_frag','qed_frag','drd2_frag','sa_frag']
+    tasks = ['seh_frag','qed_frag','drd2_frag','sa_frag','gsk3_frag']
 
-    #tasks = ['seh_frag', 'tdc_frag']             
-    #oracles = ['qed','drd2','sa'] 
 
     ray.init(
         num_cpus=get_num_cpus(), #num_cpus,#8, #num_cpus,
@@ -210,7 +195,7 @@ if __name__ == "__main__":
         "print_every": 10,
         "num_training_steps": num_training_steps,#10_000,
         "num_workers": num_workers,
-        "num_final_gen_steps": 320,
+        "num_final_gen_steps": num_final_gen_steps, 
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
@@ -223,7 +208,7 @@ if __name__ == "__main__":
             "illegal_action_logreward": -75,
             "train_random_action_prob": 0.0,
             "valid_random_action_prob": 0.0,
-            "valid_sample_cond_info": False,
+            "valid_sample_cond_info": True,
             "tb": {
                 "variant": TBVariant.TB,
                 "Z_learning_rate": 1e-3,
@@ -250,7 +235,7 @@ if __name__ == "__main__":
             "adam_eps": 1e-8,
             },
         "replay": {
-            "use": False,
+            "use": True,
             "capacity": 100,
             "warmup": 100,
             "hindsight_ratio": 0.0,

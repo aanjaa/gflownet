@@ -1,4 +1,4 @@
-
+ 
 import os
 import shutil
 import socket
@@ -7,7 +7,6 @@ import wandb
 
 import numpy as np
 import wandb
-from gflownet.utils.metrics_final_eval import candidates_eval
 from gflownet.utils.misc import prepend_keys
 from gflownet.tasks.seh_frag import SEHFragTrainer
 from gflownet.tasks.tdc_frag import TDCFragTrainer
@@ -35,9 +34,9 @@ def main(hps,use_wandb=False):
     Trainer = get_Trainer(hps)
     trial = Trainer(hps)
     info_final = trial.run()
-    if trial.cfg.num_final_gen_steps > 0:
-        info_candidates = candidates_eval(path = trial.cfg.log_dir+"final", k=trial.cfg.evaluation.k, reward_thresh = trial.cfg.evaluation.reward_thresh, tanimoto_thresh=trial.cfg.evaluation.tanimoto_thresh)
-        info_final = {**info_final,**info_candidates}
+    # if trial.cfg.num_final_gen_steps > 0:
+    #     info_candidates = candidates_eval(final_gen_batches,path = trial.cfg.log_dir+"final", k=trial.cfg.evaluation.k, reward_thresh = trial.cfg.evaluation.reward_thresh, tanimoto_thresh=trial.cfg.evaluation.tanimoto_thresh)
+    #     info_final = {**info_final,**info_candidates}
 
     if use_wandb:
         wandb.log(prepend_keys(info_final,"final"))
@@ -65,11 +64,11 @@ if __name__ == "__main__":
         "log_dir": f"./logs/mol_eval/",
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 10, #10_000,
+        "num_training_steps": 2, #10_000,
         "print_every": 1,
-        "validate_every":1,
+        "validate_every":2,
         "num_workers": 8, 
-        "num_final_gen_steps": 1,
+        "num_final_gen_steps": 2,
         "opt": {
             "lr_decay": 20_000,
             },
@@ -80,7 +79,7 @@ if __name__ == "__main__":
             "online_batch_size": 64,
             "replay_batch_size": 32,
             "offline_batch_size": 0,
-            "valid_sample_cond_info": False,
+            "valid_sample_cond_info": True,
             "tb": {
                 "do_length_normalize": False, ###TODO
                 "variant": TBVariant.DB,
@@ -121,7 +120,7 @@ if __name__ == "__main__":
         "task": {
             "name": "seh_frag", 
             "tdc": {
-                "oracle": 'sa',
+                "oracle": 'gsk3',
                 },
             },
         "evaluation": {

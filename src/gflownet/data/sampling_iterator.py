@@ -196,6 +196,7 @@ class SamplingIterator(IterableDataset):
             else:  # If we're not sampling the conditionals, then the idcs refer to listed preferences
                 num_online = num_offline
                 num_offline = 0
+                # this only works for MOO task
                 cond_info = self.task.encode_conditional_information(
                     steer_info=torch.stack([self.data[i] for i in idcs])
                 )
@@ -318,6 +319,7 @@ class SamplingIterator(IterableDataset):
                 )
                 log_rewards[torch.logical_not(is_valid)] = self.illegal_action_logreward
 
+            assert len(trajs) == len(log_rewards) == len(flat_rewards) == len(cond_info["encoding"])
             # Construct batch
             batch = self.algo.construct_batch(trajs, cond_info["encoding"], log_rewards)
             batch.num_offline = num_offline
@@ -335,7 +337,11 @@ class SamplingIterator(IterableDataset):
                 self.validate_batch(batch, trajs)
 
             self.train_it += worker_info.num_workers if worker_info is not None else 1
-            yield batch
+
+            # TODO: need to change this for non-molecule environments
+            smiles = [Chem.MolToSmiles(self.ctx.graph_to_mol(traj["result"])) for traj in trajs] 
+            #alternative: [traj["smi"] for traj in trajs]
+            yield batch, (smiles, flat_rewards)
 
     def validate_batch(self, batch, trajs):
         for actions, atypes in [(batch.actions, self.ctx.action_type_order)] + (

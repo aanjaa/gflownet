@@ -19,8 +19,10 @@ from gflownet.envs.graph_building_env import GraphActionCategorical, GraphBuildi
 from gflownet.utils.misc import create_logger
 from gflownet.utils.multiprocessing_proxy import mp_object_wrapper
 from gflownet.utils.misc import prepend_keys, average_values_across_dicts
+from gflownet.utils.metrics_final_eval import candidates_eval
 import wandb
 import omegaconf
+from rdkit import Chem
 
 from .config import Config
 
@@ -259,9 +261,9 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
-            online_batch_size=self.cfg.algo.online_batch_size,
-            replay_batch_size=0,
-            offline_batch_size=self.cfg.algo.offline_batch_size,
+            online_batch_size = self.cfg.algo.online_batch_size,
+            replay_batch_size = 0,
+            offline_batch_size = self.cfg.algo.offline_batch_size,
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
             replay_buffer=None,
             log_dir=str(pathlib.Path(self.cfg.log_dir) / "valid"),
@@ -280,7 +282,9 @@ class GFNTrainer:
         )
 
     def build_final_data_loader(self) -> DataLoader:
-        model, dev = self._wrap_for_mp(self.sampling_model, send_to_device=True)
+        # Final data loader is now used to generate final trajectories for evaluation
+        # it is different from validation data loader in that it does not take any test_data
+        model, dev = self._wrap_for_mp(self.model, send_to_device=True) #changed to model
         iterator = SamplingIterator(
             [], #changed
             model,
@@ -295,9 +299,10 @@ class GFNTrainer:
             replay_buffer=None,
             log_dir=os.path.join(self.cfg.log_dir, "final"),
             sample_cond_info=self.cfg.algo.valid_sample_cond_info, #changed
+            stream=False,
             random_action_prob=0.0,
             hindsight_ratio=0.0,
-            init_train_iter=self.cfg.num_training_steps,
+            #init_train_iter=self.cfg.num_training_steps,
         )
         for hook in self.sampling_hooks:
             iterator.add_log_hook(hook)
@@ -355,7 +360,7 @@ class GFNTrainer:
         start = self.cfg.start_at_step + 1
         num_training_steps = self.cfg.num_training_steps
         logger.info("Starting training")
-        for it, batch in zip(range(start, 1 + num_training_steps), cycle(train_dl)):
+        for it, (batch,_) in zip(range(start, 1 + num_training_steps), cycle(train_dl)):
             epoch_idx = it // epoch_length
             batch_idx = it % epoch_length
             if self.replay_buffer is not None and len(self.replay_buffer) < self.replay_buffer.warmup:
@@ -371,7 +376,10 @@ class GFNTrainer:
 
             if (valid_freq > 0 and it % valid_freq == 0) or (it == num_training_steps):
                 info_val = []
-                for batch in valid_dl:
+                #for batch in valid_dl:
+                # validate on at least 10 batches
+                for valid_it, (batch, _) in zip(range(10),cycle(valid_dl)):
+                    #print("valid_it", valid_it)
                     info_val.append(self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx))
                 info_val = average_values_across_dicts(info_val)
                 logger.info(f"VALIDATION - iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_val.items()))
@@ -389,13 +397,19 @@ class GFNTrainer:
 
         num_final_gen_steps = self.cfg.num_final_gen_steps
         if num_final_gen_steps:
+            gen_candidates_list = []
             logger.info(f"Generating final {num_final_gen_steps} batches ...")
-            for it, batch in zip(
+            for it,( _, gen_candidates_eval_info) in zip(
                 range(num_training_steps, num_training_steps + num_final_gen_steps + 1),
                 cycle(final_dl),
             ):
-                pass
+                gen_candidates_list.append(gen_candidates_eval_info)
+            
+            info_final_gen = candidates_eval(gen_candidates_list)
             logger.info("Final generation steps completed.")
+            self.log(info_final_gen, it)
+            logger.info(f"FINAL CANDIDATE GENERATION : " + " ".join(f"{k}:{v:.2f}" for k, v in info_final_gen.items()))
+            info_val = {**info_val,**info_final_gen}
 
         return info_val
 

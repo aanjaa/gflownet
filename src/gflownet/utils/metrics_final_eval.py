@@ -10,11 +10,12 @@ import pandas as pd
 import numpy as np
 import os
 import glob
+import torch
+import networkx as nx
 
 
-def candidates_eval(path, k=100, reward_thresh=8, tanimoto_thresh=0.7):
+def mols_and_reward_from_path(path):  
     df = read_db_data_in_folder(path)
-
     df = df.drop_duplicates(subset=["smi"])
 
     if len(df) < k:
@@ -25,7 +26,22 @@ def candidates_eval(path, k=100, reward_thresh=8, tanimoto_thresh=0.7):
     smiles = df["smi"].tolist()
     rewards = df["r"].tolist()
     mols = df["mol"].tolist()
+    return mols,rewards
 
+def candidates_eval(gen_candidates_info_list, k=100, reward_thresh=8, tanimoto_thresh=0.7):
+    #unpack gen_candidates_info_list
+    smiles = []
+    flat_rewards = []
+    for batch in gen_candidates_info_list:
+        smiles.extend(batch[0])
+        flat_rewards.extend(batch[1])
+    assert len(smiles) == len(flat_rewards)
+    mols = [Chem.MolFromSmiles(smi) for smi in smiles]
+    final_info = calculate_eval_metrics(mols,flat_rewards,k=k,reward_thresh=reward_thresh,tanimoto_thresh=tanimoto_thresh)
+    return final_info
+
+
+def calculate_eval_metrics(mols,rewards,k=100,reward_thresh=8,tanimoto_thresh=0.7):
     avg_topk = compute_avg_topk(rewards, k=k)
 
     candidates = list(zip(rewards,mols))
@@ -33,7 +49,7 @@ def candidates_eval(path, k=100, reward_thresh=8, tanimoto_thresh=0.7):
 
     avg_reward_in_topk_modes = compute_diverse_topk(candidates, k=k, tanimoto_thresh=tanimoto_thresh)
     num_of_modes,num_candidates_above_reward_thresh = compute_num_of_modes(candidates, reward_thresh = reward_thresh, tanimoto_thresh=tanimoto_thresh)
-    return {"avg_topk": avg_topk, "avg_reward_in_topk_modes": avg_reward_in_topk_modes,"num_of_modes":num_of_modes, "max_reward":max(rewards),"num_candidates":len(candidates),"num_candidates_above_reward_thresh":num_candidates_above_reward_thresh}
+    return {"avg_topk": avg_topk, "avg_reward_in_topk_modes": avg_reward_in_topk_modes,"num_of_modes":num_of_modes, "max_reward":max(rewards).item(),"num_candidates":len(candidates),"num_candidates_above_reward_thresh":num_candidates_above_reward_thresh}
 
 
 
