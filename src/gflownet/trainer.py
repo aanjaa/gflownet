@@ -300,7 +300,7 @@ class GFNTrainer:
             log_dir=os.path.join(self.cfg.log_dir, "final"),
             sample_cond_info=self.cfg.algo.valid_sample_cond_info, #changed
             stream=False,
-            random_action_prob=0.0,
+            random_action_prob=self.cfg.algo.valid_random_action_prob,
             hindsight_ratio=0.0,
             #init_train_iter=self.cfg.num_training_steps,
         )

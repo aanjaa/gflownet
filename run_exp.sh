@@ -1,13 +1,13 @@
 #!/bin/bash
 experiment_num=0 # change the number of experiment you want to run
-prepend_name="onek_" #prepend to the name of experiment
+prepend_name="8work_" #prepend to the name of experiment
 num_random_samples=4 #how many times to sample from shared search space
-num_gpus=2 #2 
+num_gpus=4 #2 
 num_cpus=32 #16 
-mem=32 #128
+mem=100 
 
-experiment_names_list=("training_objectives" "exploration")
-num_trials_list=(16 20)
+experiment_names_list=("training_objectives" "buffer" "exploration")
+num_trials_list=(12 73 15)
 experiment_name="${experiment_names_list[$experiment_num]}"
 num_trials="${num_trials_list[$experiment_num]}"
 
@@ -20,7 +20,7 @@ for ((idx=0; idx<$num_trials; idx++)); do
   # Create the bash script file
   script_name="${bash_dir}/${experiment_name}_${idx}.sh"
   echo "#!/bin/bash" > $script_name
-  echo "#SBATCH --job-name=${experiment_name}_${idx}" >> $script_name
+  echo "#SBATCH --job-name=${experiment_name:0:8}${idx}" >> $script_name
   echo "#SBATCH --partition=long" >> $script_name
   echo "#SBATCH --gres=gpu:$num_gpus" >> $script_name
   echo "#SBATCH --cpus-per-task=$num_cpus" >> $script_name

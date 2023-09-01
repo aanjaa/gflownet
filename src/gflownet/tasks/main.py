@@ -61,12 +61,12 @@ def get_Trainer(hps) -> Union[SEHFragTrainer, TDCFragTrainer]:
 if __name__ == "__main__":
 
     hps = {
-        "log_dir": f"./logs/mol_eval/",
+        "log_dir": f"./logs/mol_eval", #_{time.strftime('%Y-%m-%d_%H-%M-%S')
         "device": "cuda"  if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 2, #10_000,
-        "print_every": 1,
-        "validate_every":2,
+        "num_training_steps": 1000, #10_000,
+        "print_every": 10,
+        "validate_every":100,
         "num_workers": 8, 
         "num_final_gen_steps": 2,
         "opt": {
@@ -74,7 +74,7 @@ if __name__ == "__main__":
             },
         "algo": {
             "method": "TB",
-            "method_name": "TB",
+            "helper": "TB",
             "sampling_tau": 0.99,
             "online_batch_size": 64,
             "replay_batch_size": 32,
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         "replay": {
             "use": True,
             "capacity": 100 ,#100,
-            "warmup": 10, #10,
+            "warmup": 1, #10,
             "hindsight_ratio": 0.0,
             "insertion": {
                 "strategy": "diversity_and_reward",#"diversity_and_reward_fast",
@@ -96,7 +96,7 @@ if __name__ == "__main__":
                 "reward_thresh": 0.9,
                 },
             "sampling":{
-                "strategy": "quantile",
+                "strategy": "uniform",
                 "weighted": {
                     "reward_power": 1.0,
                     },
@@ -112,15 +112,16 @@ if __name__ == "__main__":
             #     "dist_params": [0, 64.0],
             #     }
             "temperature": {
-                "sample_dist": "constant", #"discrete", #"uniform" #"constant"
-                "dist_params": [1.0], #[16,32,64,96,128] ,#[0, 64.0] # [1.0]
-                "num_thermometer_dim": 1,
+                "sample_dist": "discrete", #"discrete", #"uniform" #"constant"
+                "dist_params": [1/2,1/4,1/32], #[16,32,64,96,128] ,#[0, 64.0] # [1.0]
+                "num_thermometer_dim": 32,
                 },
             },
         "task": {
-            "name": "tdc_frag", 
+            "name": "tdc_frag",
+            "helper": "qed_frag", 
             "tdc": {
-                "oracle": 'gsk3',
+                "oracle": 'qed',
                 },
             },
         "evaluation": {

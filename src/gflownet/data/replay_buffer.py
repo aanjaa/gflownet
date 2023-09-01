@@ -156,6 +156,8 @@ class ReplayBuffer(object):
 
     def sample(self, batch_size):
 
+        #print(self.get_buffer_stats())
+
         if self.sampling_strategy == "uniform":
             idxs = self.rng.choice(len(self.buffer), batch_size)
 

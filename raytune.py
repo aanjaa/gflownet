@@ -102,8 +102,7 @@ def run_raytune(search_space):
         json.dump(config, file, sort_keys=True, indent=4, skipkeys=True,
                     default=lambda o: f"<<non-serializable: {type(o).__qualname__}>>")
 
-
-def convert_training_obj(training_objective):
+def method_config(training_objective):
     if training_objective == "FM":
         method = "FM"
         variant = TBVariant.TB
@@ -122,10 +121,12 @@ def convert_training_obj(training_objective):
         method_name = "DB"
     else:
         raise ValueError(f"Training objective {training_objective} not supported")
-    return method, method_name, variant
+    
+    return {"algo.method": method,
+            "algo.helper": method_name, 
+            "algo.tb.variant": variant}
 
-
-def convert_task(task):
+def task_config(task):
     if task == "seh_frag":
         task_name = "seh_frag"
         oracle = "qed"
@@ -147,14 +148,46 @@ def convert_task(task):
         oracle = "sa"
     else:
         raise ValueError(f"Task {task} not supported")
-    return task_name,oracle
+    return {"task.name": task_name,
+            "task.helper": task,
+            "task.tdc.oracle": oracle}
 
+def log_dir_config(name):
+    return {"log_dir": f"./logs/{args.prepend_name}{args.experiment_name}/{name}"}
+
+def exploration_config(exploration_strategy):
+    if exploration_strategy == "e_random":
+        return {"algo.train_random_action_prob": tune.choice([0.001,0.005,0.01,0.05]),
+                "algo.valid_random_action_prob": 0,
+                }
+    
+    elif exploration_strategy == "tempered":
+        return {"cond.temperature.sample_dist": "constant",
+                "cond.temperature.dist_params": tune.choice([1,1/2,1/4,1/8,1/16,1/32]),
+                "cond.temperature.num_thermometer_dim": 1,
+                }
+    
+    elif exploration_strategy == "exploitation":
+        return {"cond.temperature.sample_dist": "constant",
+                "cond.temperature.dist_params": tune.choice([1,2,4,8,16,32]),
+                "cond.temperature.num_thermometer_dim": 1,
+                }
+    elif exploration_strategy == "temp_cond":
+        return {"cond.temperature.sample_dist": "discrete",
+                "cond.temperature.dist_params": [1/2,1/4,1/8,1/16,1/32], #tune.choice([[1/2,1/4,1/32],[1/2,1/4,1/8,1/16,1/32]]),
+                "cond.temperature.num_thermometer_dim": 32,
+                }
+    elif exploration_strategy == "no_exploration":
+        return {}
+    else:
+        raise ValueError(f"Exploration strategy {exploration_strategy} not supported")
+    
 
 if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("--experiment_name", type=str,
-                        default="training_objectives") 
+                        default="exploration") 
     parser.add_argument("--idx", type=int, default=0, help ="Run number in an experiment")
     parser.add_argument("--prepend_name", type=str, default="debug_")
     parser.add_argument("--num_gpus", type=int, default=1) 
@@ -164,7 +197,7 @@ if __name__ == "__main__":
 
     #group_factory = tune.PlacementGroupFactory([{'CPU': 4.0, 'GPU': .25}])
     group_factory = tune.PlacementGroupFactory([{'CPU': args.num_cpus/args.num_samples, 'GPU': args.num_gpus/args.num_samples}])
-    num_workers = 4
+    num_workers = 8
 
     num_training_steps = 1000 #15_650 #10_000
     validate_every = 100 # 1000 #1000
@@ -176,7 +209,13 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives =  ["TB", "FM", "SubTB1", "DB"]
-    tasks = ['seh_frag','qed_frag','drd2_frag','sa_frag'] #gsk3_frag'
+    tasks = ['seh_frag','qed_frag','drd2_frag'] #'sa_frag' gsk3_frag'
+
+    exploration_strategies = ["no_exploration","e_random","tempered","exploitation","temp_cond"]
+
+    buffer_samplings = ["uniform","weighted","quantile"] #"weighted_power" 3x3x4x2
+    buffer_insertions = ["fifo","reward","diversity","diversity_and_reward"]
+    buffer_sizes = [1000,10_000]
 
     ray.init(
         num_cpus=args.num_cpus,
@@ -197,7 +236,7 @@ if __name__ == "__main__":
         "overwrite_existing_exp": True,
         "algo": {
             "method": "TB",
-            "method_name": "TB",
+            "helper": "TB",
             "sampling_tau": 0.9,
             "online_batch_size": 64,
             "replay_batch_size": 32,
@@ -234,8 +273,8 @@ if __name__ == "__main__":
             },
         "replay": {
             "use": True,
-            "capacity": 100,
-            "warmup": 100,
+            "capacity": 1000,
+            "warmup": 1,
             "hindsight_ratio": 0.0,
             "insertion": {
                 "strategy": "fifo",#"diversity_and_reward_fast",
@@ -261,7 +300,8 @@ if __name__ == "__main__":
                 }
             },
         "task": {
-            "name": "seh",
+            "name": "seh_frag",
+            "helper": "seh_frag",
             "tdc": {
                 "oracle": "qed"
                 }
@@ -278,37 +318,69 @@ if __name__ == "__main__":
     Z_learning_rate = tune.choice([3e-2,1e-2,3e-3,1e-3,3e-4,1e-4])
     Z_lr_decay = tune.choice([100_000,50_000,20_000,1_000])
 
+    shared_search_space = {
+        "opt.lr_decay": lr_decay,
+        "opt.learning_rate": learning_rate,
+        "algo.tb.Z_learning_rate": Z_learning_rate,
+        "algo.tb.Z_lr_decay": Z_lr_decay,
+    }
+
+
     search_spaces = []
 
     if args.experiment_name == "training_objectives":
         for task in tasks: #["sa_frag"]: #tasks:
             for training_objective in training_objectives:
-
                 name = f"{task}_{training_objective}"
-
-                method,method_name,variant = convert_training_obj(training_objective)
-                task_name, oracle = convert_task(task)
-
                 changes_config = {
-                    "log_dir": f"./logs/{args.prepend_name}{args.experiment_name}/{name}",
-                    "opt.lr_decay": lr_decay,
-                    "opt.learning_rate": learning_rate,
-                    "algo.tb.Z_learning_rate": Z_learning_rate,
-                    "algo.tb.Z_lr_decay": Z_lr_decay,
-                    "algo.method": method,
-                    "algo.method_name": method_name,
-                    "algo.tb.variant": variant,
-                    "task.name": task_name,
-                    "task.tdc.oracle": oracle,
+                    **log_dir_config(name),
+                    **task_config(task),
+                    **method_config(training_objective),
+                    **shared_search_space,
                     }
-                
                 search_spaces.append(change_config(copy.deepcopy(config), changes_config)) 
 
-        print(f"Running run number {args.idx} out of {len(search_spaces)} with log_dir {search_spaces[args.idx]['log_dir']}")
-        run_raytune(search_spaces[args.idx])
 
-            #try:
-            #    run_raytune(search_space,metric,num_samples)
-            #except:
-            #    continue
+    elif args.experiment_name == "buffer":
+        for task in tasks:
+            for buffer_size in buffer_sizes:
+                for sampling in buffer_samplings:
+                    for insertion in buffer_insertions:
+                        name = f"{task}_{buffer_size}_{sampling}_{insertion}"
+                        changes_config = {
+                            **log_dir_config(name),
+                            **task_config(task),
+                            **shared_search_space,
+                            "replay.use": True,
+                            "replay.capacity": buffer_size,
+                            "replay.insertion.strategy": insertion,
+                            "replay.sampling.strategy": sampling,
+                            }
+                        search_spaces.append(change_config(copy.deepcopy(config), changes_config)) 
+
+            # No buffer control
+            name = f"{task}_no_buffer"
+            changes_config = {
+                **log_dir_config(name),
+                **task_config(task),
+                **shared_search_space,
+                "replay.use": False,
+                }
+            search_spaces.append(change_config(copy.deepcopy(config), changes_config)) 
+
+    elif args.experiment_name == "exploration":
+        for task in tasks:
+            for exploration_strategy in exploration_strategies:
+                name = f"{task}_{exploration_strategy}"
+                changes_config = {
+                    **log_dir_config(name),
+                    **task_config(task),
+                    **shared_search_space,
+                    **exploration_config(exploration_strategy),
+                    }
+                search_spaces.append(change_config(copy.deepcopy(config), changes_config))
+
+    print(f"Running run number {args.idx} out of {len(search_spaces)} with log_dir {search_spaces[args.idx]['log_dir']}")
+    run_raytune(search_spaces[args.idx])
+
             
