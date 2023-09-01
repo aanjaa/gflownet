@@ -39,7 +39,7 @@ def main(hps,use_wandb=False):
     #     info_final = {**info_final,**info_candidates}
 
     if use_wandb:
-        wandb.log(prepend_keys(info_final,"final"))
+        #wandb.log(prepend_keys(info_final,"final"))
         wandb.finish()
     
     print("\n\nFinal results:\n")
@@ -118,7 +118,7 @@ if __name__ == "__main__":
                 },
             },
         "task": {
-            "name": "seh_frag", 
+            "name": "tdc_frag", 
             "tdc": {
                 "oracle": 'gsk3',
                 },

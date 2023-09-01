@@ -56,7 +56,7 @@ def run_raytune(search_space):
         tune_config=tune.TuneConfig(
             metric=metric,
             mode=mode,
-            num_samples=num_samples,
+            num_samples=args.num_samples,
             # scheduler=asha_scheduler,
             search_alg=BasicVariantGenerator(constant_grid_search=True),
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
@@ -155,41 +155,39 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--experiment_name", type=str,
                         default="training_objectives") 
-    parser.add_argument("--idx", type=int, default=0, help ="Run number in an experiment") 
+    parser.add_argument("--idx", type=int, default=0, help ="Run number in an experiment")
+    parser.add_argument("--prepend_name", type=str, default="debug_")
+    parser.add_argument("--num_gpus", type=int, default=1) 
+    parser.add_argument("--num_cpus", type=int, default=4)
+    parser.add_argument("--num_samples", type=int, default=1)
     args = parser.parse_args()
 
+    #group_factory = tune.PlacementGroupFactory([{'CPU': 4.0, 'GPU': .25}])
+    group_factory = tune.PlacementGroupFactory([{'CPU': args.num_cpus/args.num_samples, 'GPU': args.num_gpus/args.num_samples}])
+    num_workers = 4
 
-    batch_experiment_name = "debug" #+ time.strftime("%d.%m_%H:%M:%S")
-    folder_name = "logs_debug"
+    num_training_steps = 1000 #15_650 #10_000
+    validate_every = 100 # 1000 #1000
+    num_final_gen_steps = 100 #320
 
-    num_gpus = 1 #torch.cuda.device_count() #this doesn't always work on the cluster
-    group_factory = tune.PlacementGroupFactory([{'CPU': 8.0, 'GPU': 1.0}])
-    num_workers = 7
-
-    num_samples = 1
-    num_training_steps = 1#15_650 #10_000
-    validate_every = 1 # 1000 #1000
-    num_final_gen_steps = 1 #320
-
-    metric = "val_loss"
-    mode = "min"   
+    #metric = "val_loss"
+    #mode = "min"   
+    metric = "avg_reward_in_topk_modes"
+    mode = "max"
 
     training_objectives =  ["TB", "FM", "SubTB1", "DB"]
-    tasks = ['seh_frag','qed_frag','drd2_frag','sa_frag','gsk3_frag']
-
+    tasks = ['seh_frag','qed_frag','drd2_frag','sa_frag'] #gsk3_frag'
 
     ray.init(
-        num_cpus=get_num_cpus(), #num_cpus,#8, #num_cpus,
-        num_gpus=num_gpus, # num_gpus #2 #num_gpus,
+        num_cpus=args.num_cpus,
+        num_gpus=args.num_gpus, 
     )
-
-    print(f"Number of cpus: {get_num_cpus()}, number of gpus: {num_gpus}")
-    print(f"Placement group factory: {group_factory}")
-    print(f"Number of workers: {num_workers}")
+    #num_cpus = get_num_cpus()
+    #num_gpus = torch.cuda.device_count() #this doesn't always work on the cluster
 
     config = {
         "log_dir": f"./logs/debug_raytune",
-        "device": "cuda" if bool(num_gpus) else "cpu",
+        "device": "cuda" if bool(args.num_gpus) else "cpu",
         "seed": 0, # TODO: how is seed handled?
         "validate_every": validate_every,#1000,
         "print_every": 10,
@@ -292,7 +290,7 @@ if __name__ == "__main__":
                 task_name, oracle = convert_task(task)
 
                 changes_config = {
-                    "log_dir": f"./{folder_name}/{args.experiment_name}_{batch_experiment_name}/{name}",
+                    "log_dir": f"./logs/{args.prepend_name}{args.experiment_name}/{name}",
                     "opt.lr_decay": lr_decay,
                     "opt.learning_rate": learning_rate,
                     "algo.tb.Z_learning_rate": Z_learning_rate,
@@ -306,7 +304,7 @@ if __name__ == "__main__":
                 
                 search_spaces.append(change_config(copy.deepcopy(config), changes_config)) 
 
-        print(f"Running run number {args.idx} out of {len(search_spaces)}")
+        print(f"Running run number {args.idx} out of {len(search_spaces)} with log_dir {search_spaces[args.idx]['log_dir']}")
         run_raytune(search_spaces[args.idx])
 
             #try:
