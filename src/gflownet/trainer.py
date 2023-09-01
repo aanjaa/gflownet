@@ -129,7 +129,7 @@ class GFNTrainer:
         self.set_default_hps(self.cfg)
         # OmegaConf returns a fancy object but we can still pretend it's a Config instance
         self.cfg = OmegaConf.merge(self.cfg, hps)  # type: ignore
-        #self.cfg = self.setup_sweep_config(hps) #For doing wandb sweeps
+        # self.cfg = self.setup_sweep_config(hps) #For doing wandb sweeps
 
         self.device = torch.device(self.cfg.device)
         # Print the loss every `self.print_every` iterations
@@ -142,13 +142,13 @@ class GFNTrainer:
 
         self.setup()
 
-    def setup_sweep_config(self,hps):        
+    def setup_sweep_config(self, hps):
         # Params we hyperoptimize over
         wandb_config = {
-            "learning_rate":self.cfg.opt.learning_rate, 
+            "learning_rate": self.cfg.opt.learning_rate,
             "lr_decay": self.cfg.opt.lr_decay,
             "Z_learning_rate": self.cfg.algo.tb.Z_learning_rate,
-            "Z_lr_decay":self.cfg.algo.tb.Z_lr_decay,
+            "Z_lr_decay": self.cfg.algo.tb.Z_lr_decay,
         }
         # Get wandb to generate params we sweep over
         wandb.init(project=self.cfg.experiment_name, sync_tensorboard=True, config=wandb_config)
@@ -156,20 +156,19 @@ class GFNTrainer:
 
         # Convert wandb.config to one that can be merged with omegaconf
         wandb_hps = {
-            "opt":{
+            "opt": {
                 "learning_rate": wandb.config["learning_rate"],
                 "lr_decay": wandb.config["lr_decay"],
             },
-            "algo":{
-                "tb":{
+            "algo": {
+                "tb": {
                     "Z_learning_rate": wandb.config["Z_learning_rate"],
                     "Z_lr_decay": wandb.config["Z_lr_decay"],
                 }
-            }
+            },
         }
         cfg = OmegaConf.merge(self.cfg, wandb_hps)
         return cfg
-
 
     def set_default_hps(self, base: Config):
         raise NotImplementedError()
@@ -261,9 +260,9 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
-            online_batch_size = self.cfg.algo.online_batch_size,
-            replay_batch_size = 0,
-            offline_batch_size = self.cfg.algo.offline_batch_size,
+            online_batch_size=self.cfg.algo.online_batch_size,
+            replay_batch_size=0,
+            offline_batch_size=self.cfg.algo.offline_batch_size,
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
             replay_buffer=None,
             log_dir=str(pathlib.Path(self.cfg.log_dir) / "valid"),
@@ -284,9 +283,9 @@ class GFNTrainer:
     def build_final_data_loader(self) -> DataLoader:
         # Final data loader is now used to generate final trajectories for evaluation
         # it is different from validation data loader in that it does not take any test_data
-        model, dev = self._wrap_for_mp(self.model, send_to_device=True) #changed to model
+        model, dev = self._wrap_for_mp(self.model, send_to_device=True)  # changed to model
         iterator = SamplingIterator(
-            [], #changed
+            [],  # changed
             model,
             self.ctx,
             self.algo,
@@ -298,11 +297,11 @@ class GFNTrainer:
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
             replay_buffer=None,
             log_dir=os.path.join(self.cfg.log_dir, "final"),
-            sample_cond_info=self.cfg.algo.valid_sample_cond_info, #changed
+            sample_cond_info=self.cfg.algo.valid_sample_cond_info,  # changed
             stream=False,
             random_action_prob=self.cfg.algo.valid_random_action_prob,
             hindsight_ratio=0.0,
-            #init_train_iter=self.cfg.num_training_steps,
+            # init_train_iter=self.cfg.num_training_steps,
         )
         for hook in self.sampling_hooks:
             iterator.add_log_hook(hook)
@@ -317,7 +316,7 @@ class GFNTrainer:
     def train_batch(self, batch: gd.Batch, epoch_idx: int, batch_idx: int, train_it: int) -> Dict[str, Any]:
         try:
             loss, info = self.algo.compute_batch_losses(self.model, batch)
-            #print("batch len", len(batch.is_valid))
+            # print("batch len", len(batch.is_valid))
             if not torch.isfinite(loss):
                 raise ValueError("loss is not finite")
             step_info = self.step(loss)
@@ -360,7 +359,7 @@ class GFNTrainer:
         start = self.cfg.start_at_step + 1
         num_training_steps = self.cfg.num_training_steps
         logger.info("Starting training")
-        for it, (batch,_) in zip(range(start, 1 + num_training_steps), cycle(train_dl)):
+        for it, (batch, _) in zip(range(start, 1 + num_training_steps), cycle(train_dl)):
             epoch_idx = it // epoch_length
             batch_idx = it % epoch_length
             if self.replay_buffer is not None and len(self.replay_buffer) < self.replay_buffer.warmup:
@@ -371,25 +370,25 @@ class GFNTrainer:
             info_train = self.train_batch(batch.to(self.device), epoch_idx, batch_idx, it)
             if it % self.print_every == 0:
                 logger.info(f"iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_train.items()))
-            info_train = prepend_keys(info_train,"train")
+            info_train = prepend_keys(info_train, "train")
             self.log(info_train, it)
 
             if (valid_freq > 0 and it % valid_freq == 0) or (it == num_training_steps):
                 info_val = []
-                #for batch in valid_dl:
+                # for batch in valid_dl:
                 # validate on at least 10 batches
-                for valid_it, (batch, _) in zip(range(10),cycle(valid_dl)):
-                    #print("valid_it", valid_it)
+                for valid_it, (batch, _) in zip(range(10), cycle(valid_dl)):
+                    # print("valid_it", valid_it)
                     info_val.append(self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx))
                 info_val = average_values_across_dicts(info_val)
                 logger.info(f"VALIDATION - iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_val.items()))
-                info_val = prepend_keys(info_val,"val")
+                info_val = prepend_keys(info_val, "val")
                 self.log(info_val, it)
                 end_metrics = {}
                 for c in callbacks.values():
                     if hasattr(c, "on_validation_end"):
                         c.on_validation_end(end_metrics)
-                end_metrics = prepend_keys(end_metrics,"val_end")
+                end_metrics = prepend_keys(end_metrics, "val_end")
                 self.log(end_metrics, it)
             if ckpt_freq > 0 and it % ckpt_freq == 0:
                 self._save_state(it)
@@ -399,17 +398,17 @@ class GFNTrainer:
         if num_final_gen_steps:
             gen_candidates_list = []
             logger.info(f"Generating final {num_final_gen_steps} batches ...")
-            for it,( _, gen_candidates_eval_info) in zip(
+            for it, (_, gen_candidates_eval_info) in zip(
                 range(num_training_steps, num_training_steps + num_final_gen_steps + 1),
                 cycle(final_dl),
             ):
                 gen_candidates_list.append(gen_candidates_eval_info)
-            
+
             info_final_gen = candidates_eval(gen_candidates_list)
             logger.info("Final generation steps completed.")
             self.log(info_final_gen, it)
             logger.info(f"FINAL CANDIDATE GENERATION : " + " ".join(f"{k}:{v:.2f}" for k, v in info_final_gen.items()))
-            info_val = {**info_val,**info_final_gen}
+            info_val = {**info_val, **info_final_gen}
 
         return info_val
 
@@ -427,9 +426,8 @@ class GFNTrainer:
         if not hasattr(self, "_summary_writer"):
             self._summary_writer = torch.utils.tensorboard.SummaryWriter(self.cfg.log_dir)
         for k, v in info.items():
-            #self._summary_writer.add_scalar(f"{key}_{k}", v, index)
+            # self._summary_writer.add_scalar(f"{key}_{k}", v, index)
             self._summary_writer.add_scalar(k, v, index)
-
 
 
 def cycle(it):

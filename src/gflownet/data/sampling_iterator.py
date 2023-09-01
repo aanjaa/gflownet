@@ -287,7 +287,7 @@ class SamplingIterator(IterableDataset):
                 # push the online trajectories in the replay buffer and sample a new 'online' batch
                 for i in range(num_offline, len(trajs)):
                     self.replay_buffer.push(
-                        deepcopy(trajs[i]),                                                               
+                        deepcopy(trajs[i]),
                         deepcopy(log_rewards[i]),
                         deepcopy(flat_rewards[i]),
                         deepcopy(cond_info[i]),
@@ -339,8 +339,8 @@ class SamplingIterator(IterableDataset):
             self.train_it += worker_info.num_workers if worker_info is not None else 1
 
             # TODO: need to change this for non-molecule environments
-            smiles = [Chem.MolToSmiles(self.ctx.graph_to_mol(traj["result"])) for traj in trajs] 
-            #alternative: [traj["smi"] for traj in trajs]
+            smiles = [Chem.MolToSmiles(self.ctx.graph_to_mol(traj["result"])) for traj in trajs]
+            # alternative: [traj["smi"] for traj in trajs]
             yield batch, (smiles, flat_rewards)
 
     def validate_batch(self, batch, trajs):
@@ -439,4 +439,3 @@ class SQLiteLog:
         cur.executemany(f'insert into results values ({",".join("?"*len(rows[0]))})', rows)  # nosec
         cur.close()
         self.db.commit()
-        
