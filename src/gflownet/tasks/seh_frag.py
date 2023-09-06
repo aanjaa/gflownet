@@ -118,14 +118,16 @@ class SEHFragTrainer(StandardOnlineTrainer):
         )
 
     def setup_env_context(self):
-        self.ctx = FragMolBuildingEnvContext(max_frags=self.cfg.algo.max_nodes, num_cond_dim=self.task.num_cond_dim)
+        self.ctx = FragMolBuildingEnvContext(
+            max_frags=self.cfg.algo.max_nodes, num_cond_dim=self.task.num_cond_dim, min_len=self.cfg.algo.min_len
+        )
 
 
 def main():
     """Example of how this model can be run outside of Determined"""
     hps = {
         "log_dir": "./logs/debug_run_seh_frag",
-        "device": torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
         "num_training_steps": 10_000,
         "num_workers": 8,
