@@ -116,7 +116,7 @@ class TrajectoryBalance(GFNAlgorithm):
         self.tb_loss_is_huber = False
         self.mask_invalid_rewards = False
         self.reward_normalize_losses = False
-        self.sample_temp = 1
+        self.sample_temp = cfg.algo.sample_temp # 1.0
         self.bootstrap_own_reward = self.cfg.bootstrap_own_reward
 
         self.graph_sampler = GraphSampler(

@@ -260,6 +260,7 @@ if __name__ == "__main__":
             "method": "TB",
             "helper": "TB",
             "sampling_tau": 0.9,
+            "sample_temp": 1.0,
             "online_batch_size": 64,
             "replay_batch_size": 32,
             "offline_batch_size": 0,
