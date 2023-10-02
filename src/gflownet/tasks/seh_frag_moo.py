@@ -373,7 +373,7 @@ if __name__ == "__main__":
 
     hps = {
     "log_dir": "./logs/debug_run_sfm",
-    "device": "cuda" if torch.cuda.is_available() else "cpu",#torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
+    "device": "cuda" if torch.cuda.is_available() else "cpu",#"cuda" if torch.cuda.is_available() else "cpu",
     "pickle_mp_messages": True,
     "overwrite_existing_exp": True,
     "seed": 0,
