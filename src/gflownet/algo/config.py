@@ -124,6 +124,7 @@ class AlgoConfig:
     max_edges: int = 128
     illegal_action_logreward: float = -100
     train_random_action_prob: float = 0.0
+    train_random_traj_prob: float = 0.0
     valid_random_action_prob: float = 0.0
     valid_sample_cond_info: bool = True
     sampling_tau: float = 0.0

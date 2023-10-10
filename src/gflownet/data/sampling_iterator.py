@@ -42,6 +42,7 @@ class SamplingIterator(IterableDataset):
         log_dir: str = None,
         sample_cond_info: bool = True,
         random_action_prob: float = 0.0,
+        random_traj_prob: float = 0.0,
         hindsight_ratio: float = 0.0,
         init_train_iter: int = 0,
     ):
@@ -104,6 +105,7 @@ class SamplingIterator(IterableDataset):
         self.sample_online_once = True  # TODO: deprecate this, disallow len(data) == 0 entirely
         self.sample_cond_info = sample_cond_info
         self.random_action_prob = random_action_prob
+        self.random_traj_prob = random_traj_prob
         self.hindsight_ratio = hindsight_ratio
         self.train_it = init_train_iter
         self.do_validate_batch = False  # Turn this on for debugging
@@ -211,6 +213,7 @@ class SamplingIterator(IterableDataset):
                         num_online,
                         cond_info["encoding"][num_offline:],
                         random_action_prob=self.random_action_prob,
+                        random_traj_prob=self.random_traj_prob,
                     )
                 if self.algo.bootstrap_own_reward:
                     # The model can be trained to predict its own reward,

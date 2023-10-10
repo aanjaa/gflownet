@@ -134,7 +134,8 @@ class TrajectoryBalance(GFNAlgorithm):
             self._init_subtb(torch.device("cuda"))  # TODO: where are we getting device info?
 
     def create_training_data_from_own_samples(
-        self, model: TrajectoryBalanceModel, n: int, cond_info: Tensor, random_action_prob: float
+        self, model: TrajectoryBalanceModel, n: int, cond_info: Tensor, random_action_prob: float,
+        random_traj_prob: float = 0.0
     ):
         """Generate trajectories by sampling a model
 
@@ -162,7 +163,19 @@ class TrajectoryBalance(GFNAlgorithm):
         """
         dev = self.ctx.device
         cond_info = cond_info.to(dev)
+        # import pdb; pdb.set_trace();
+        
+        if random_traj_prob > 0:
+            n_rand = int(n * random_traj_prob)
+            rand_data = self.graph_sampler.sample_from_model(model, n_rand, cond_info[:n_rand], dev, 1)
+            n = n - n_rand
+            cond_info = cond_info[n_rand:]
         data = self.graph_sampler.sample_from_model(model, n, cond_info, dev, random_action_prob)
+        
+        if random_traj_prob > 0:
+            # for key, value in data:
+            data = data + rand_data
+
         logZ_pred = model.logZ(cond_info)
         for i in range(n):
             data[i]["logZ"] = logZ_pred[i].item()
