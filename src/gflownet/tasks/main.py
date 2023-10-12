@@ -5,7 +5,6 @@ from typing import Callable, Dict, List, Tuple, Union
 import wandb
 
 import numpy as np
-import wandb
 from gflownet.utils.misc import prepend_keys
 from gflownet.tasks.seh_frag import SEHFragTrainer
 from gflownet.tasks.tdc_frag import TDCFragTrainer
@@ -84,7 +83,7 @@ if __name__ == "__main__":
             "valid_sample_cond_info": True,
             "tb": {
                 "do_length_normalize": False,  ###TODO
-                "variant": TBVariant.DB,
+                "variant": TBVariant.TB,
             },
         },
         "replay": {
@@ -121,7 +120,7 @@ if __name__ == "__main__":
         },
         "task": {
             "name": "tdc_frag",
-            "helper": "qed_frag",
+            "helper": "tdc_frag",
             "tdc": {
                 "oracle": "qed",
             },
