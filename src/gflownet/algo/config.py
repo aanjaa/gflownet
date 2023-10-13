@@ -116,7 +116,7 @@ class AlgoConfig:
     """
 
     method: str = "TB"
-    helper : str = ""
+    helper: str = ""
     online_batch_size: int = 64
     replay_batch_size: int = 0
     offline_batch_size: int = 0
@@ -125,6 +125,7 @@ class AlgoConfig:
     max_edges: int = 128
     illegal_action_logreward: float = -100
     train_random_action_prob: float = 0.0
+    train_random_traj_prob: float = 0.0
     valid_random_action_prob: float = 0.0
     valid_sample_cond_info: bool = True
     sampling_tau: float = 0.0

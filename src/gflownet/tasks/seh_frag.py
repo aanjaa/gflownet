@@ -96,6 +96,7 @@ class SEHFragTrainer(StandardOnlineTrainer):
         cfg.algo.sampling_tau = 0.9
         cfg.algo.illegal_action_logreward = -75
         cfg.algo.train_random_action_prob = 0.0
+        cfg.algo.train_random_traj_prob = 0.0
         cfg.algo.valid_random_action_prob = 0.0
         #cfg.algo.valid_offline_ratio = 0
         cfg.algo.tb.epsilon = None
@@ -204,7 +205,7 @@ class SEHFragTrainer(StandardOnlineTrainer):
 #     "num_training_steps": 10, #10_000,
 #     "print_every": 1,
 #     "validate_every":10,
-#     "num_workers": 2,
+#     "num_workers": 0,
 #     "num_final_gen_steps": 2 ,
 #     "opt": {
 #         "lr_decay": 20000,
@@ -212,6 +213,7 @@ class SEHFragTrainer(StandardOnlineTrainer):
 #     "algo": {
 #         "method": "TB",
 #         "sampling_tau": 0.99,
+#         "train_random_traj_prob": 0.2
 #         },
 #     "cond": {
 #         "temperature": {

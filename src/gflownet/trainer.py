@@ -238,6 +238,7 @@ class GFNTrainer:
             replay_buffer=replay_buffer,
             log_dir=str(pathlib.Path(self.cfg.log_dir) / "train"),
             random_action_prob=self.cfg.algo.train_random_action_prob,
+            random_traj_prob=self.cfg.algo.train_random_traj_prob,
             hindsight_ratio=self.cfg.replay.hindsight_ratio,
         )
         for hook in self.sampling_hooks:
