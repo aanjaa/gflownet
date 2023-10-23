@@ -7,7 +7,7 @@ from typing import Callable, List
 import numpy as np
 import torch
 import torch.nn as nn
-from rdkit import RDLogger
+from rdkit import RDLogger, Chem
 from torch.utils.data import Dataset, IterableDataset
 
 from gflownet.data.replay_buffer import ReplayBuffer
@@ -336,7 +336,10 @@ class SamplingIterator(IterableDataset):
             self.train_it += worker_info.num_workers if worker_info is not None else 1
 
             # TODO: need to change this for non-molecule environments
-            smiles = [Chem.MolToSmiles(self.ctx.graph_to_mol(traj["result"])) for traj in trajs]
+            try:
+                smiles = [Chem.MolToSmiles(self.ctx.graph_to_mol(traj["result"])) for traj in trajs]
+            except:
+                smiles = [traj["result"].__repr__() for traj in trajs]
             # alternative: [traj["smi"] for traj in trajs]
             yield batch, (smiles, flat_rewards)
 
