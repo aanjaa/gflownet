@@ -126,7 +126,9 @@ class SEHFragTrainer(StandardOnlineTrainer):
         )
 
     def setup_env_context(self):
-        self.ctx = FragMolBuildingEnvContext(max_frags=self.cfg.algo.max_nodes, num_cond_dim=self.task.num_cond_dim)
+        self.ctx = FragMolBuildingEnvContext(
+            max_frags=self.cfg.algo.max_nodes, num_cond_dim=self.task.num_cond_dim, min_len=self.cfg.algo.min_len
+        )
 
 
 # def main():
