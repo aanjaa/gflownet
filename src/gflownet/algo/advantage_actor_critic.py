@@ -56,7 +56,8 @@ class A2C:
         self.graph_sampler = GraphSampler(ctx, env, self.max_len, self.max_nodes, rng, self.sample_temp)
 
     def create_training_data_from_own_samples(
-        self, model: nn.Module, n: int, cond_info: Tensor, random_action_prob: float
+        self, model: nn.Module, n: int, cond_info: Tensor, random_action_prob: float,
+        random_traj_prob: float = 0.0
     ):
         """Generate trajectories by sampling a model
 

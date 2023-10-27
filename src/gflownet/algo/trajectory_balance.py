@@ -70,11 +70,13 @@ class TrajectoryBalance(GFNAlgorithm):
     - TB: Trajectory Balance: Improved Credit Assignment in GFlowNets Nikolay Malkin, Moksh Jain,
     Emmanuel Bengio, Chen Sun, Yoshua Bengio
     https://arxiv.org/abs/2201.13259
+
     - SubTB(1): Learning GFlowNets from partial episodes for improved convergence and stability, Kanika Madan, Jarrid
     Rector-Brooks, Maksym Korablyov, Emmanuel Bengio, Moksh Jain, Andrei Cristian Nica, Tom Bosc, Yoshua Bengio,
     Nikolay Malkin
     https://arxiv.org/abs/2209.12782
     Note: We implement the lambda=1 version of SubTB here (this choice is based on empirical results from the paper)
+
     - DB: GFlowNet Foundations, Yoshua Bengio, Salem Lahlou, Tristan Deleu, Edward J. Hu, Mo Tiwari, Emmanuel Bengio
     https://arxiv.org/abs/2111.09266
     Note: This is the trajectory version of Detailed Balance (i.e. transitions are not iid, but trajectories are).
@@ -118,6 +120,10 @@ class TrajectoryBalance(GFNAlgorithm):
         self.reward_normalize_losses = False
         self.sample_temp = cfg.algo.sample_temp # 1.0
         self.bootstrap_own_reward = self.cfg.bootstrap_own_reward
+        # When the model is autoregressive, we can avoid giving it ["A", "AB", "ABC", ...] as a sequence of inputs, and
+        # instead give "ABC...Z" as a single input, but grab the logits at every timestep. Only works if using something
+        # like a transformer with causal self-attention.
+        self.model_is_autoregressive = False
 
         self.graph_sampler = GraphSampler(
             ctx,
@@ -265,10 +271,15 @@ class TrajectoryBalance(GFNAlgorithm):
         batch: gd.Batch
              A (CPU) Batch object with relevant attributes added
         """
-        torch_graphs = [self.ctx.graph_to_Data(i[0]) for tj in trajs for i in tj["traj"]]
-        actions = [
-            self.ctx.GraphAction_to_aidx(g, a) for g, a in zip(torch_graphs, [i[1] for tj in trajs for i in tj["traj"]])
-        ]
+        if self.model_is_autoregressive:
+            torch_graphs = [self.ctx.graph_to_Data(tj["traj"][-1][0]) for tj in trajs]
+            actions = [self.ctx.GraphAction_to_aidx(g, i[1]) for g, tj in zip(torch_graphs, trajs) for i in tj["traj"]]
+        else:
+            torch_graphs = [self.ctx.graph_to_Data(i[0]) for tj in trajs for i in tj["traj"]]
+            actions = [
+                self.ctx.GraphAction_to_aidx(g, a)
+                for g, a in zip(torch_graphs, [i[1] for tj in trajs for i in tj["traj"]])
+            ]
         batch = self.ctx.collate(torch_graphs)
         batch.traj_lens = torch.tensor([len(i["traj"]) for i in trajs])
         batch.log_p_B = torch.cat([i["bck_logprobs"] for i in trajs], 0)
@@ -347,7 +358,10 @@ class TrajectoryBalance(GFNAlgorithm):
         if self.cfg.do_parameterize_p_b:
             fwd_cat, bck_cat, per_graph_out = model(batch, cond_info[batch_idx])
         else:
-            fwd_cat, per_graph_out = model(batch, cond_info[batch_idx])
+            if self.model_is_autoregressive:
+                fwd_cat, per_graph_out = model(batch, cond_info, batched=True)
+            else:
+                fwd_cat, per_graph_out = model(batch, cond_info[batch_idx])
         # Retreive the reward predictions for the full graphs,
         # i.e. the final graph of each trajectory
         log_reward_preds = per_graph_out[final_graph_idx, 0]
