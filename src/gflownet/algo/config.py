@@ -115,7 +115,7 @@ class AlgoConfig:
     """
 
     method: str = "TB"
-    helper: str = ""
+    helper: str = "TB"
     online_batch_size: int = 64
     replay_batch_size: int = 0
     offline_batch_size: int = 0

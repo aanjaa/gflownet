@@ -219,11 +219,11 @@ if __name__ == "__main__":
     group_factory = tune.PlacementGroupFactory(
         [{"CPU": args.num_cpus / args.num_samples, "GPU": args.num_gpus / args.num_samples}]
     )
-    num_workers = 8
+    num_workers = 3
 
-    num_training_steps = 1000  # 15_650 #10_000
-    validate_every = 100  # 1000 #1000
-    num_final_gen_steps = 100  # 320
+    num_training_steps = 15650 #1000 # 15_650 #10_000
+    validate_every = 1000  #100 # 1000 #1000
+    num_final_gen_steps = 320 #100 # 320
 
     # metric = "val_loss"
     # mode = "min"
