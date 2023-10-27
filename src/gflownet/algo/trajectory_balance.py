@@ -495,7 +495,6 @@ class TrajectoryBalance(GFNAlgorithm):
             reward_loss = reward_losses.mean() * self.cfg.reward_loss_multiplier
         else:
             reward_loss = 0
-
         loss = traj_losses.mean() + reward_loss
         info = {
             "offline_loss": traj_losses[: batch.num_offline].mean() if batch.num_offline > 0 else 0,
@@ -506,6 +505,7 @@ class TrajectoryBalance(GFNAlgorithm):
             "invalid_losses": (invalid_mask * traj_losses).sum() / (invalid_mask.sum() + 1e-4),
             "logZ": log_Z.mean(),
             "loss": loss.item(),
+            "flat_rewards": batch.flat_rewards.mean().item()
         }
         return loss, info
 
