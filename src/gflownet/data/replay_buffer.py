@@ -108,6 +108,8 @@ class ReplayBuffer(object):
         Compute similarity between traj and all elements in the buffer.
         """
         modes_fp = [traj.fp for (_,traj) in self.buffer]
+        if all([v is None for v in modes_fp]):
+            return 0
         sim = Similarity(traj.fp, modes_fp)
         max_sim = max(sim)
         return max_sim #, sim.index(max_sim)
@@ -157,7 +159,9 @@ class ReplayBuffer(object):
     def sample(self, batch_size):
 
         #print(self.get_buffer_stats())
-
+        # import pdb; pdb.set_trace();
+        if len(self.buffer) < batch_size:
+            return [], torch.tensor([]), torch.tensor([]), [], torch.tensor([])
         if self.sampling_strategy == "uniform":
             idxs = self.rng.choice(len(self.buffer), batch_size)
 
