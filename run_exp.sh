@@ -1,10 +1,10 @@
 #!/bin/bash
-experiment_num=0 # change the number of experiment you want to run
-prepend_name="8work_" #prepend to the name of experiment
-num_random_samples=4 #how many times to sample from shared search space
-num_gpus=4 #2 
-num_cpus=32 #16 
-mem=100 
+experiment_num=0 # change the number of experiment you want to run 0--> training objective, 1--> buffer, 2--> exploration
+prepend_name="4gpu_32cpu_64mem_15650steps_4samples_debug_" #prepend to the name of experiment
+num_random_samples=4 #8 #how many times to sample from shared search space
+num_gpus=4 #4 #2 
+num_cpus=32 #32 #16 
+mem=64 #100 #how much memory to allocate in GB
 
 experiment_names_list=("training_objectives" "buffer" "exploration")
 num_trials_list=(12 73 15)
