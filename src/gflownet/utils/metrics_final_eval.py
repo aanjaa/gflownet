@@ -12,7 +12,10 @@ import os
 import glob
 import torch
 import networkx as nx
-
+try:
+    from Levenshtein import distance
+except:
+    print("`pip install levenshtein` to use `distance`")
 
 def mols_and_reward_from_path(path):  
     df = read_db_data_in_folder(path)
@@ -28,17 +31,30 @@ def mols_and_reward_from_path(path):
     mols = df["mol"].tolist()
     return mols,rewards
 
-def candidates_eval(gen_candidates_info_list, k=100, reward_thresh=8, tanimoto_thresh=0.7):
+def candidates_eval(gen_candidates_info_list, cand_type="mols", k=100, reward_thresh=8, tanimoto_thresh=0.7):
     #unpack gen_candidates_info_list
-    smiles = []
-    flat_rewards = []
-    for batch in gen_candidates_info_list:
-        smiles.extend(batch[0])
-        flat_rewards.extend(batch[1])
-    assert len(smiles) == len(flat_rewards)
-    mols = [Chem.MolFromSmiles(smi) for smi in smiles]
-    final_info = calculate_eval_metrics(mols,flat_rewards,k=k,reward_thresh=reward_thresh,tanimoto_thresh=tanimoto_thresh)
-    return final_info
+    if cand_type == "mols":
+        smiles = []
+        flat_rewards = []
+        for batch in gen_candidates_info_list:
+            smiles.extend(batch[0])
+            flat_rewards.extend(batch[1])
+        assert len(smiles) == len(flat_rewards)
+        mols = [Chem.MolFromSmiles(smi) for smi in smiles]
+        final_info = calculate_eval_metrics(mols,flat_rewards,k=k,reward_thresh=reward_thresh,tanimoto_thresh=tanimoto_thresh)
+        return final_info
+    elif cand_type == "str":
+        return {}
+        # TODO: implement
+        strs = []
+        flat_rewards = []
+        for batch in gen_candidates_info_list:
+            strs.extend(batch[0])
+            flat_rewards.extend(batch[1])
+        assert len(smiles) == len(flat_rewards)
+        mols = [Chem.MolFromSmiles(smi) for smi in smiles]
+        final_info = calculate_eval_metrics(mols,flat_rewards,k=k,reward_thresh=reward_thresh,tanimoto_thresh=tanimoto_thresh)
+        return final_info
 
 
 def calculate_eval_metrics(mols,rewards,k=100,reward_thresh=8,tanimoto_thresh=0.7):
