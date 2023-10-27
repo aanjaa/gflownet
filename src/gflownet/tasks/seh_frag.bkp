@@ -79,7 +79,8 @@ class SEHFragTrainer(StandardOnlineTrainer):
     def set_default_hps(self, cfg: Config):
         cfg.hostname = socket.gethostname()
         cfg.pickle_mp_messages = False
-        cfg.num_workers = 8
+        cfg.num_workers = 5
+
         cfg.opt.learning_rate = 1e-4
         cfg.opt.weight_decay = 1e-8
         cfg.opt.momentum = 0.9
@@ -87,27 +88,32 @@ class SEHFragTrainer(StandardOnlineTrainer):
         cfg.opt.lr_decay = 20_000
         cfg.opt.clip_grad_type = "norm"
         cfg.opt.clip_grad_param = 10
-        # cfg.algo.global_batch_size = 64
-        # cfg.algo.offline_ratio = 0
-        cfg.model.num_emb = 128
-        cfg.model.num_layers = 4
 
+        #cfg.algo.global_batch_size = 64
+        #cfg.algo.offline_ratio = 0
         cfg.algo.method = "TB"
         cfg.algo.max_nodes = 9
         cfg.algo.sampling_tau = 0.9
         cfg.algo.illegal_action_logreward = -75
         cfg.algo.train_random_action_prob = 0.0
+        cfg.algo.train_random_traj_prob = 0.0
         cfg.algo.valid_random_action_prob = 0.0
-        # cfg.algo.valid_offline_ratio = 0
+        #cfg.algo.valid_offline_ratio = 0
         cfg.algo.tb.epsilon = None
         cfg.algo.tb.bootstrap_own_reward = False
         cfg.algo.tb.Z_learning_rate = 1e-3
         cfg.algo.tb.Z_lr_decay = 50_000
         cfg.algo.tb.do_parameterize_p_b = False
 
+        cfg.model.num_emb = 128
+        cfg.model.num_layers = 4
+
         cfg.replay.use = False
         cfg.replay.capacity = 10_000
         cfg.replay.warmup = 1_000
+
+        cfg.cond.temperature.sample_dist = "uniform"
+        cfg.cond.temperature.dist_params = [0,64.0]
 
         cfg.task.name = "seh"
 
@@ -220,36 +226,3 @@ class SEHFragTrainer(StandardOnlineTrainer):
 #         }
 #     }
 #     info_val = main(hps,use_wandb= False)
-def main():
-    """Example of how this model can be run outside of Determined"""
-    hps = {
-        "log_dir": "./logs/debug_run_seh_frag",
-        "device": "cuda" if torch.cuda.is_available() else "cpu",
-        "overwrite_existing_exp": True,
-        "num_training_steps": 10_000,
-        "num_workers": 0,
-        "opt": {
-            "lr_decay": 20000,
-        },
-        "algo": {"sampling_tau": 0.99},
-        "cond": {
-            "temperature": {
-                "sample_dist": "uniform",
-                "dist_params": [0, 64.0],
-            }
-        },
-    }
-    if os.path.exists(hps["log_dir"]):
-        if hps["overwrite_existing_exp"]:
-            shutil.rmtree(hps["log_dir"])
-        else:
-            raise ValueError(f"Log dir {hps['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
-    os.makedirs(hps["log_dir"])
-
-    trial = SEHFragTrainer(hps)
-    trial.print_every = 1
-    trial.run()
-
-
-if __name__ == "__main__":
-    main()

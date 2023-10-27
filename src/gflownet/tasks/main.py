@@ -119,8 +119,8 @@ if __name__ == "__main__":
             },
         },
         "task": {
-            "name": "tdc_frag",
-            "helper": "tdc_frag",
+            "name": "seh_frag",
+            "helper": "seh_frag",
             "tdc": {
                 "oracle": "qed",
             },

@@ -164,148 +164,100 @@ class TDCFragTrainer(StandardOnlineTrainer):
         self.ctx = FragMolBuildingEnvContext(max_frags=self.cfg.algo.max_nodes, num_cond_dim=self.task.num_cond_dim)
  
 
-    # def setup_model(self):
-    #     self.model = GraphTransformerGFN(self.ctx, num_emb=self.hps['num_emb'], num_layers=self.hps['num_layers'])
+    def setup_model(self):
+        self.model = GraphTransformerGFN(self.ctx, num_emb=self.hps['num_emb'], num_layers=self.hps['num_layers'])
 
-    # def setup(self):
-    #     hps = self.hps
-    #     RDLogger.DisableLog('rdApp.*')
-    #     self.rng = np.random.default_rng(142857)
-    #     self.env = GraphBuildingEnv()
-    #     self.ctx = FragMolBuildingEnvContext(max_frags=9, num_cond_dim=hps['num_cond_dim'])
-    #     self.training_data = []
-    #     self.test_data = []
-    #     self.offline_ratio = 0
-    #     self.valid_offline_ratio = 0
-    #     self.setup_algo()
-    #     self.setup_task()
-    #     self.setup_model()
+    def setup(self):
+        hps = self.hps
+        RDLogger.DisableLog('rdApp.*')
+        self.rng = np.random.default_rng(142857)
+        self.env = GraphBuildingEnv()
+        self.ctx = FragMolBuildingEnvContext(max_frags=9, num_cond_dim=hps['num_cond_dim'])
+        self.training_data = []
+        self.test_data = []
+        self.offline_ratio = 0
+        self.valid_offline_ratio = 0
+        self.setup_algo()
+        self.setup_task()
+        self.setup_model()
 
-    #     # Separate Z parameters from non-Z to allow for LR decay on the former
-    #     Z_params = list(self.model.logZ.parameters())
-    #     non_Z_params = [i for i in self.model.parameters() if all(id(i) != id(j) for j in Z_params)]
-    #     self.opt = torch.optim.Adam(non_Z_params, hps['learning_rate'], (hps['momentum'], 0.999),
-    #                                 weight_decay=hps['weight_decay'], eps=hps['adam_eps'])
-    #     self.opt_Z = torch.optim.Adam(Z_params, hps['learning_rate'], (0.9, 0.999))
-    #     self.lr_sched = torch.optim.lr_scheduler.LambdaLR(self.opt, lambda steps: 2**(-steps / hps['lr_decay']))
-    #     self.lr_sched_Z = torch.optim.lr_scheduler.LambdaLR(self.opt_Z, lambda steps: 2**(-steps / hps['Z_lr_decay']))
+        # Separate Z parameters from non-Z to allow for LR decay on the former
+        Z_params = list(self.model.logZ.parameters())
+        non_Z_params = [i for i in self.model.parameters() if all(id(i) != id(j) for j in Z_params)]
+        self.opt = torch.optim.Adam(non_Z_params, hps['learning_rate'], (hps['momentum'], 0.999),
+                                    weight_decay=hps['weight_decay'], eps=hps['adam_eps'])
+        self.opt_Z = torch.optim.Adam(Z_params, hps['learning_rate'], (0.9, 0.999))
+        self.lr_sched = torch.optim.lr_scheduler.LambdaLR(self.opt, lambda steps: 2**(-steps / hps['lr_decay']))
+        self.lr_sched_Z = torch.optim.lr_scheduler.LambdaLR(self.opt_Z, lambda steps: 2**(-steps / hps['Z_lr_decay']))
 
-    #     self.sampling_tau = hps['sampling_tau']
-    #     if self.sampling_tau > 0:
-    #         self.sampling_model = copy.deepcopy(self.model)
-    #     else:
-    #         self.sampling_model = self.model
-    #     eps = hps['tb_epsilon']
-    #     hps['tb_epsilon'] = ast.literal_eval(eps) if isinstance(eps, str) else eps
+        self.sampling_tau = hps['sampling_tau']
+        if self.sampling_tau > 0:
+            self.sampling_model = copy.deepcopy(self.model)
+        else:
+            self.sampling_model = self.model
+        eps = hps['tb_epsilon']
+        hps['tb_epsilon'] = ast.literal_eval(eps) if isinstance(eps, str) else eps
 
-    #     self.mb_size = hps['global_batch_size']
-    #     self.clip_grad_param = hps['clip_grad_param']
-    #     self.clip_grad_callback = {
-    #         'value': (lambda params: torch.nn.utils.clip_grad_value_(params, self.clip_grad_param)),
-    #         'norm': (lambda params: torch.nn.utils.clip_grad_norm_(params, self.clip_grad_param)),
-    #         'none': (lambda x: None)
-    #     }[hps['clip_grad_type']]
+        self.mb_size = hps['global_batch_size']
+        self.clip_grad_param = hps['clip_grad_param']
+        self.clip_grad_callback = {
+            'value': (lambda params: torch.nn.utils.clip_grad_value_(params, self.clip_grad_param)),
+            'norm': (lambda params: torch.nn.utils.clip_grad_norm_(params, self.clip_grad_param)),
+            'none': (lambda x: None)
+        }[hps['clip_grad_type']]
 
-    # def step(self, loss: Tensor):
-    #     loss.backward()
-    #     for i in self.model.parameters():
-    #         self.clip_grad_callback(i)
-    #     self.opt.step()
-    #     self.opt.zero_grad()
-    #     self.opt_Z.step()
-    #     self.opt_Z.zero_grad()
-    #     self.lr_sched.step()
-    #     self.lr_sched_Z.step()
-    #     if self.sampling_tau > 0:
-    #         for a, b in zip(self.model.parameters(), self.sampling_model.parameters()):
-    #             b.data.mul_(self.sampling_tau).add_(a.data * (1 - self.sampling_tau))
+    def step(self, loss: Tensor):
+        loss.backward()
+        for i in self.model.parameters():
+            self.clip_grad_callback(i)
+        self.opt.step()
+        self.opt.zero_grad()
+        self.opt_Z.step()
+        self.opt_Z.zero_grad()
+        self.lr_sched.step()
+        self.lr_sched_Z.step()
+        if self.sampling_tau > 0:
+            for a, b in zip(self.model.parameters(), self.sampling_model.parameters()):
+                b.data.mul_(self.sampling_tau).add_(a.data * (1 - self.sampling_tau))
 
-## STANDARD VERSION
-# def main():
-#     """Example of how this model can be run outside of Determined"""
-#     hps = {
-#         "log_dir": "./logs/debug_run_seh_frag",
-#         "experiment_name": "debug_run_seh_frag",
-#         "device": "cuda"  if torch.cuda.is_available() else "cpu",
-#         "overwrite_existing_exp": True,
-#         "num_training_steps": 10, #10_000,
-#         "validate_every": 10,
-#         "num_workers": 1,
-#         "opt": {
-#             "lr_decay": 20_000,
-#             },
-#         "algo": {
-#             "sampling_tau": 0.99,
-#             },
-#         "cond": {
-#             "temperature": {
-#                 "sample_dist": "uniform",
-#                 "dist_params": [0, 64.0],
-#                 }
-#             },
-#         "task": {
-#             "tdc": {
-#                 "oracle_name": "mestranol_similarity",
-#                 }
-#             },
-#         }
+# STANDARD VERSION
+def main():
+    """Example of how this model can be run outside of Determined"""
+    hps = {
+        "log_dir": "./logs/debug_run_seh_frag",
+        "experiment_name": "debug_run_seh_frag",
+        "device": "cuda"  if torch.cuda.is_available() else "cpu",
+        "overwrite_existing_exp": True,
+        "num_training_steps": 10, #10_000,
+        "validate_every": 10,
+        "num_workers": 1,
+        "opt": {
+            "lr_decay": 20_000,
+            },
+        "algo": {
+            "sampling_tau": 0.99,
+            },
+        "cond": {
+            "temperature": {
+                "sample_dist": "uniform",
+                "dist_params": [0, 64.0],
+                }
+            },
+        "task": {
+            "tdc": {
+                "oracle_name": "mestranol_similarity",
+                }
+            },
+        }
     
-#     trial = TDCFragTrainer(hps)
-#     trial.print_every = 5
-#     info_val = trial.run()
+    trial = TDCFragTrainer(hps)
+    trial.print_every = 5
+    info_val = trial.run()
 
 
-# if __name__ == '__main__':
-#     main()
-
-
-
-# #RAYTUNE VERSION
-# def main(hps,use_wandb=False):
-#     if use_wandb:
-#         wandb.init(project=hps["log_dir"].split("/")[-2]+"_sweep",name=hps["log_dir"].split("/")[-1],config=hps,sync_tensorboard=True)
-
-#     if os.path.exists(hps["log_dir"]):
-#         if hps["overwrite_existing_exp"]:
-#             shutil.rmtree(hps["log_dir"])
-#         else:
-#             raise ValueError(f"Log dir {hps['log_dir']} already exists. Set overwrite_existing_exp=True to delete it.")
-#     os.makedirs(hps["log_dir"])
-
-#     trial = TDCFragTrainer(hps)
-#     info_val = trial.run()
-#     if use_wandb:
-#         wandb.log(prepend_keys(info_val,"final"))
-#         wandb.finish()
-#     return info_val
+if __name__ == '__main__':
+    main()
 
 
 
-# if __name__ == "__main__":
-
-#     hps = {
-#         "log_dir": "./logs/debug_tdc_opt_frag",
-#         "device": "cuda"  if torch.cuda.is_available() else "cpu",
-#         "overwrite_existing_exp": True,
-#         "num_training_steps": 10, #10_000,
-#         "print_every": 10,
-#         "validate_every":10,
-#         "num_workers": 1,
-#         "num_final_gen_steps": 2 ,
-#         "opt": {
-#             "lr_decay": 20_000,
-#             },
-#         "algo": {
-#             "sampling_tau": 0.99,
-#             },
-#         "cond": {
-#             "temperature": {
-#                 "sample_dist": "uniform",
-#                 "dist_params": [0, 64.0],
-#                 }
-#             },
-#         "task": {
-#             "name": "qed"
-#             }
-#         }
-#     info_val = main(hps,use_wandb = True)
+#RAYTUNE VERSION
