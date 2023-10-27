@@ -42,6 +42,7 @@ class SEHTask(GFNTask):
         self.dataset = dataset
         self.temperature_conditional = TemperatureConditional(cfg, rng)
         self.num_cond_dim = self.temperature_conditional.encoding_size()
+        self.cand_type = "mols"
 
     def flat_reward_transform(self, y: Union[float, Tensor]) -> FlatRewards:
         return FlatRewards(torch.as_tensor(y) / 8)
