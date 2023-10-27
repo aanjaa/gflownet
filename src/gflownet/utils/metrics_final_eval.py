@@ -43,7 +43,7 @@ def candidates_eval(gen_candidates_info_list, cand_type="mols", k=100, reward_th
         mols = [Chem.MolFromSmiles(smi) for smi in smiles]
         final_info = calculate_eval_metrics(mols,flat_rewards,k=k,reward_thresh=reward_thresh,tanimoto_thresh=tanimoto_thresh)
         return final_info
-    elif cand_type == "str":
+    elif cand_type == "seqs":
         return {}
         # TODO: implement
         strs = []

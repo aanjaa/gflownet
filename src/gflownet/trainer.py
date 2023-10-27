@@ -406,7 +406,7 @@ class GFNTrainer:
             ):
                 gen_candidates_list.append(gen_candidates_eval_info)
 
-            info_final_gen = candidates_eval(gen_candidates_list, type=self.cfg.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, tanimoto_thresh=self.cfg.evaluation.tanimoto_thresh)
+            info_final_gen = candidates_eval(gen_candidates_list, cand_type=self.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, tanimoto_thresh=self.cfg.evaluation.tanimoto_thresh)
             logger.info("Final generation steps completed.")
             self.log(info_final_gen, it)
             logger.info(f"FINAL CANDIDATE GENERATION : " + " ".join(f"{k}:{v:.2f}" for k, v in info_final_gen.items()))
