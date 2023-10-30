@@ -19,7 +19,7 @@ from gflownet.trainer import GFNAlgorithm
 from gflownet.utils.transforms import thermometer
 
 
-class QLearning(GFNAlgorithm):
+class DoubleQLearning(GFNAlgorithm):
     def __init__(
         self,
         env: GraphBuildingEnv,
@@ -52,7 +52,7 @@ class QLearning(GFNAlgorithm):
         )
         self.graph_sampler.sample_temp = 0  # Greedy policy == infinitely low temperature
         self.gamma = 1
-        self.type = "dqn"  # TODO: add to config
+        self.type = "ddqn"  # TODO: add to config
 
     def create_training_data_from_own_samples(
         self,

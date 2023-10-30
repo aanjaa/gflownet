@@ -10,6 +10,7 @@ from torch import Tensor
 from gflownet.algo.advantage_actor_critic import A2C
 from gflownet.algo.flow_matching import FlowMatching
 from gflownet.algo.soft_q_learning import SoftQLearning
+from gflownet.algo.q_learning import QLearning
 from gflownet.algo.trajectory_balance import TrajectoryBalance
 from gflownet.data.replay_buffer import ReplayBuffer
 from gflownet.models.graph_transformer import GraphTransformerGFN
@@ -35,6 +36,10 @@ class StandardOnlineTrainer(GFNTrainer):
             algo = A2C
         elif algo == "SQL":
             algo = SoftQLearning
+        elif algo == "QL":
+            algo = QLearning
+        elif algo == "DoubleQL":
+            algo = DoubleQLearning
         else:
             raise ValueError(algo)
         self.algo = algo(self.env, self.ctx, self.rng, self.cfg)

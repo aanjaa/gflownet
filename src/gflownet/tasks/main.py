@@ -73,7 +73,7 @@ if __name__ == "__main__":
             "lr_decay": 20_000,
         },
         "algo": {
-            "method": "QL",
+            "method": "DQN",
             "helper": "TB",
             "sampling_tau": 0.99,
             "sample_temp": 1.0,
