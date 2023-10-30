@@ -73,7 +73,7 @@ if __name__ == "__main__":
             "lr_decay": 20_000,
         },
         "algo": {
-            "method": "TB",
+            "method": "A2C",
             "helper": "TB",
             "sampling_tau": 0.99,
             "sample_temp": 1.0,
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             },
         },
         "replay": {
-            "use": True,
+            "use": False,
             "capacity": 100,  # 100,
             "warmup": 1,  # 10,
             "hindsight_ratio": 0.0,
