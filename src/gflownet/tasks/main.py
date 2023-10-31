@@ -20,10 +20,15 @@ def main(hps, use_wandb=False):
     # Measuring time
     start_time = time.time()
 
+    # if use_wandb:
+    #     wandb.init(
+    #         project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
+    #     )
     if use_wandb:
         wandb.init(
-            project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
-        )
+        project = "gflownet",
+        config=hps,
+        sync_tensorboard=True)
 
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
@@ -73,7 +78,7 @@ if __name__ == "__main__":
             "lr_decay": 20_000,
         },
         "algo": {
-            "method": "DQN",
+            "method": "QL",
             "helper": "TB",
             "sampling_tau": 0.99,
             "sample_temp": 1.0,
@@ -131,4 +136,4 @@ if __name__ == "__main__":
             "tanimoto_thresh": 0.7,
         },
     }
-    info_val = main(hps, use_wandb=False)
+    info_val = main(hps, use_wandb=True)

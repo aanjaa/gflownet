@@ -1,25 +1,16 @@
-from typing import Any, Dict, List, Optional, Tuple
-
 import numpy as np
 import torch
 import torch.nn as nn
 import torch_geometric.data as gd
 from torch import Tensor
+from torch_scatter import scatter
 
 from gflownet.algo.graph_sampling import GraphSampler
 from gflownet.config import Config
-from gflownet.envs.graph_building_env import (
-    Graph,
-    GraphActionCategorical,
-    GraphBuildingEnv,
-    GraphBuildingEnvContext,
-    generate_forward_trajectory,
-)
-from gflownet.trainer import GFNAlgorithm
-from gflownet.utils.transforms import thermometer
+from gflownet.envs.graph_building_env import GraphBuildingEnv, GraphBuildingEnvContext, generate_forward_trajectory, GraphActionCategorical
 
 
-class QLearning(GFNAlgorithm):
+class QLearning:
     def __init__(
         self,
         env: GraphBuildingEnv,
@@ -27,7 +18,9 @@ class QLearning(GFNAlgorithm):
         rng: np.random.RandomState,
         cfg: Config,
     ):
-        """Classic Q-Learning implementation
+        """Q-Learning implementation, see
+        Hyperparameters used:
+        illegal_action_logreward: float, log(R) given to the model for non-sane end states or illegal actions
 
         Parameters
         ----------
@@ -46,22 +39,19 @@ class QLearning(GFNAlgorithm):
         self.max_len = cfg.algo.max_len
         self.max_nodes = cfg.algo.max_nodes
         self.illegal_action_logreward = cfg.algo.illegal_action_logreward
-        #self.mellowmax_omega = cfg.mellowmax_omega
-        self.graph_sampler = GraphSampler(
-            ctx, env, self.max_len, self.max_nodes, rng, input_timestep=cfg.algo.input_timestep
-        )
-        self.graph_sampler.sample_temp = 0  # Greedy policy == infinitely low temperature
-        self.gamma = 1
-        self.type = "dqn"  # TODO: add to config
+        self.alpha = cfg.algo.sql.alpha
+        self.gamma = cfg.algo.sql.gamma
+        self.invalid_penalty = cfg.algo.sql.penalty
+        self.bootstrap_own_reward = False
+        # Experimental flags
+        self.sample_temp = 1
+        self.do_q_prime_correction = False
+        self.graph_sampler = GraphSampler(ctx, env, self.max_len, self.max_nodes, rng, self.sample_temp)
 
     def create_training_data_from_own_samples(
-        self,
-        model: nn.Module,
-        batch_size: int,
-        cond_info: Tensor,
-        random_action_prob: float = 0.0,
-        starts: Optional[List[Graph]] = None,
-    ) -> List[Dict[str, Tensor]]:
+        self, model: nn.Module, n: int, cond_info: Tensor, random_action_prob: float,
+        random_traj_prob: float = 0.0
+    ):
         """Generate trajectories by sampling a model
 
         Parameters
@@ -85,9 +75,7 @@ class QLearning(GFNAlgorithm):
         """
         dev = self.ctx.device
         cond_info = cond_info.to(dev)
-        data = self.graph_sampler.sample_from_model(
-            model, batch_size, cond_info, dev, random_action_prob, starts=starts
-        )
+        data = self.graph_sampler.sample_from_model(model, n, cond_info, dev, random_action_prob)
         return data
 
     def create_training_data_from_graphs(self, graphs):
@@ -121,7 +109,7 @@ class QLearning(GFNAlgorithm):
         batch: gd.Batch
              A (CPU) Batch object with relevant attributes added
         """
-        torch_graphs = [self.ctx.graph_to_Data(i[0], timestep) for tj in trajs for timestep, i in enumerate(tj["traj"])]
+        torch_graphs = [self.ctx.graph_to_Data(i[0]) for tj in trajs for i in tj["traj"]]
         actions = [
             self.ctx.GraphAction_to_aidx(g, a) for g, a in zip(torch_graphs, [i[1] for tj in trajs for i in tj["traj"]])
         ]
@@ -130,17 +118,10 @@ class QLearning(GFNAlgorithm):
         batch.actions = torch.tensor(actions)
         batch.log_rewards = log_rewards
         batch.cond_info = cond_info
-        if self.graph_sampler.input_timestep:
-            batch.timesteps = torch.tensor(
-                [min(1, (len(tj["traj"]) - t) / self.max_len) for tj in trajs for t in range(len(tj["traj"]))]
-            )
         batch.is_valid = torch.tensor([i.get("is_valid", True) for i in trajs]).float()
-        batch.trajs = trajs
         return batch
 
-    def compute_batch_losses(  # type: ignore
-        self, model: nn.Module, batch: gd.Batch, lagged_model: nn.Module, num_bootstrap: int = 0
-    ) -> Tuple[Any, Dict[str, Any]]:
+    def compute_batch_losses(self, model: nn.Module, batch: gd.Batch, num_bootstrap: int = 0):
         """Compute the losses over trajectories contained in the batch
 
         Parameters
@@ -155,8 +136,8 @@ class QLearning(GFNAlgorithm):
         dev = batch.x.device
         # A single trajectory is comprised of many graphs
         num_trajs = int(batch.traj_lens.shape[0])
-        # rewards = torch.exp(batch.log_rewards)
-        rewards = batch.log_rewards
+        rewards = torch.exp(batch.log_rewards)
+        cond_info = batch.cond_info
 
         # This index says which trajectory each graph belongs to, so
         # it will look like [0,0,0,0,1,1,1,2,...] if trajectory 0 is
@@ -167,52 +148,39 @@ class QLearning(GFNAlgorithm):
 
         # Forward pass of the model, returns a GraphActionCategorical and per molecule predictions
         # Here we will interpret the logits of the fwd_cat as Q values
-        if self.graph_sampler.input_timestep:
-            ci = torch.cat([batch.cond_info[batch_idx], thermometer(batch.timesteps, 32)], dim=1)
-        else:
-            ci = batch.cond_info[batch_idx]
-        Q: GraphActionCategorical
-        Q, per_state_preds = model(batch, ci)
-        with torch.no_grad():
-            Qp, _ = lagged_model(batch, ci)
+        Q, per_state_preds = model(batch, cond_info[batch_idx])
 
-        if self.type == "dqn":
-            V_s = Qp.max(Qp.logits).values.detach()
-        elif self.type == "ddqn":
-            # Q(s, a) = r + γ * Q'(s', argmax Q(s', a'))
-            # Q: (num-states, num-actions)
-            # V = Q[arange(sum(batch.traj_lens)), actions]
-            # V_s : (sum(batch.traj_lens),)
-            V_s = Qp.log_prob(Q.argmax(Q.logits), logprobs=Qp.logits)
-        #elif self.type == "mellowmax":
-        #    V_s = Q.logsumexp([i * self.mellowmax_omega for i in Q.logits]).detach() / self.mellowmax_omega
+        # V_soft = Q._compute_batchwise_max(Q.logits).detach()
+        V_soft = Q.max(Q.logits).values.detach()
 
-        # Here were are again hijacking the GraphActionCategorical machinery to get Q[s,a], but
+        #V_soft = Q.logsumexp(Q.logits).detach()
+        #rewards = rewards / self.alpha
+
+        # Here were are again hijacking the GraphActionCategoical machinery to get Q[s,a], but
         # instead of logprobs we're just going to use the logits, i.e. the Q values.
         Q_sa = Q.log_prob(batch.actions, logprobs=Q.logits)
 
         # We now need to compute the target, \hat Q = R_t + V_soft(s_t+1)
-        # Shift t+1->t, pad last state with a 0, multiply by gamma
-        shifted_V = self.gamma * torch.cat([V_s[1:], torch.zeros_like(V_s[:1])])
-        # batch_lens = [3,4]
-        # V = [0,1,2, 3,4,5,6]
-        # shifted_V = [1,2,3, 4,5,6,0]
+        # Shift t+1-> t, pad last state with a 0, multiply by gamma
+        shifted_V_soft = self.gamma * torch.cat([V_soft[1:], torch.zeros_like(V_soft[:1])])
         # Replace V(s_T) with R(tau). Since we've shifted the values in the array, V(s_T) is V(s_0)
         # of the next trajectory in the array, and rewards are terminal (0 except at s_T).
-        shifted_V[final_graph_idx] = rewards * batch.is_valid + (1 - batch.is_valid) * self.illegal_action_logreward
-        # shifted_V = [1,2,R1, 4,5,6,R2]
-        # The result is \hat Q = R_t + gamma V(s_t+1) * non_terminal
-        hat_Q = shifted_V
+        shifted_V_soft[final_graph_idx] = rewards + (1 - batch.is_valid) * self.invalid_penalty
+        # The result is \hat Q = R_t + gamma V(s_t+1)
+        hat_Q = shifted_V_soft
 
-        losses = nn.functional.huber_loss(Q_sa, hat_Q, reduction="none")
-
+        losses = (Q_sa - hat_Q).pow(2)
+        traj_losses = scatter(losses, batch_idx, dim=0, dim_size=num_trajs, reduce="sum")
         loss = losses.mean()
         invalid_mask = 1 - batch.is_valid
         info = {
-            "loss": loss,
+            "mean_loss": loss,
+            "offline_loss": traj_losses[: batch.num_offline].mean() if batch.num_offline > 0 else 0,
+            "online_loss": traj_losses[batch.num_offline :].mean() if batch.num_online > 0 else 0,
             "invalid_trajectories": invalid_mask.sum() / batch.num_online if batch.num_online > 0 else 0,
-            # "invalid_losses": (invalid_mask * traj_losses).sum() / (invalid_mask.sum() + 1e-4),
-            "Q_sa": Q_sa.mean().item(),
+            "invalid_losses": (invalid_mask * traj_losses).sum() / (invalid_mask.sum() + 1e-4),
         }
 
+        if not torch.isfinite(traj_losses).all():
+            raise ValueError("loss is not finite")
         return loss, info
