@@ -211,13 +211,15 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpus", type=int, default=1)
     parser.add_argument("--num_cpus", type=int, default=4)
     parser.add_argument("--num_samples", type=int, default=1)
+    parser.add_argument("--placement_cpu", type=float, default=1.0)
+    parser.add_argument("--placement_gpu", type=float, default=0.5)
     args = parser.parse_args()
 
     # TODO: add exploration helper
 
     # group_factory = tune.PlacementGroupFactory([{'CPU': 4.0, 'GPU': .25}])
     group_factory = tune.PlacementGroupFactory(
-        [{"CPU": args.num_cpus / args.num_samples, "GPU": args.num_gpus / args.num_samples}]
+        [{"CPU": args.placement_cpu, "GPU": args.placement_gpu}]
     )
     num_workers = 3
 
