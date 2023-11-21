@@ -576,7 +576,7 @@ class GraphActionCategorical:
         # graph has no edges), we don't want to accidentally take the
         # max of that type, since we'd get 0.
         #min_val = torch.min(torch.stack([i.min() for i in x if i.numel()]))
-        min_val = torch.finfo().min
+        min_val = torch.finfo().min 
         outs = [torch.zeros(self.num_graphs, i.shape[1], device=self.dev) + min_val for i in x]
         maxl = [scatter_max(i, b, dim=0, out=out) for i, b, out in zip(x, batch, outs)]
         if reduce_columns:
