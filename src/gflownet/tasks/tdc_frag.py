@@ -52,6 +52,7 @@ class TDCTask(GFNTask):
         self.temperature_conditional = TemperatureConditional(cfg, rng)
         self.num_cond_dim = self.temperature_conditional.encoding_size()
         self.oracle = Oracle(cfg.task.tdc.oracle)
+        self.cand_type = "mols"
 
     
     # def sample_conditional_information(self, n):

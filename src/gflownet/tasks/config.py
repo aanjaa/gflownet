@@ -61,6 +61,10 @@ class QM9TaskConfig:
 class TDCTaskConfig:
     oracle: str = "qed"
 
+@dataclass
+class RNABindTaskConfig:
+    problem: str = "L14_RNA1"
+
 
 @dataclass
 class TasksConfig:

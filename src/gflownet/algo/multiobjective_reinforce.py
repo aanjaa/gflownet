@@ -50,6 +50,7 @@ class MultiObjectiveReinforce(TrajectoryBalance):
         loss = traj_losses.mean()
         info = {
             "loss": loss.item(),
+            "flat_rewards": batch.flat_rewards.mean().item(),
         }
         if not torch.isfinite(traj_losses).all():
             raise ValueError("loss is not finite")

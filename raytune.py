@@ -328,7 +328,7 @@ if __name__ == "__main__":
         "evaluation": {
             "k": 100,
             "reward_thresh": 8.0,
-            "tanimoto_thresh": 0.7,
+            "distance_thresh": 0.7,
         },
     }
 

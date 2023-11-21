@@ -272,10 +272,12 @@ class TrajectoryBalance(GFNAlgorithm):
              A (CPU) Batch object with relevant attributes added
         """
         if self.model_is_autoregressive:
-            torch_graphs = [self.ctx.graph_to_Data(tj["traj"][-1][0]) for tj in trajs]
+            # Since we're passing the entire sequence to an autoregressive model, it becomes its responsibility to deal
+            # with `t` (which is always just len(s)).
+            torch_graphs = [self.ctx.graph_to_Data(tj["traj"][-1][0], t=0) for tj in trajs]
             actions = [self.ctx.GraphAction_to_aidx(g, i[1]) for g, tj in zip(torch_graphs, trajs) for i in tj["traj"]]
         else:
-            torch_graphs = [self.ctx.graph_to_Data(i[0]) for tj in trajs for i in tj["traj"]]
+            torch_graphs = [self.ctx.graph_to_Data(i[0], t) for tj in trajs for t, i in enumerate(tj["traj"])]
             actions = [
                 self.ctx.GraphAction_to_aidx(g, a)
                 for g, a in zip(torch_graphs, [i[1] for tj in trajs for i in tj["traj"]])
@@ -493,7 +495,6 @@ class TrajectoryBalance(GFNAlgorithm):
             reward_loss = reward_losses.mean() * self.cfg.reward_loss_multiplier
         else:
             reward_loss = 0
-
         loss = traj_losses.mean() + reward_loss
         info = {
             "offline_loss": traj_losses[: batch.num_offline].mean() if batch.num_offline > 0 else 0,
@@ -504,6 +505,7 @@ class TrajectoryBalance(GFNAlgorithm):
             "invalid_losses": (invalid_mask * traj_losses).sum() / (invalid_mask.sum() + 1e-4),
             "logZ": log_Z.mean(),
             "loss": loss.item(),
+            "flat_rewards": batch.flat_rewards.mean().item()
         }
         return loss, info
 

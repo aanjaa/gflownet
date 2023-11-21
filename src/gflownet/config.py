@@ -53,12 +53,12 @@ class EvaluationConfig:
         The number of top-k molecules or number of modes to evaluate on
     reward_thresh : float
         The reward threshold for calculating number of modes
-    tanimoto_thresh : float
-        The tanimoto threshold for getting distinct modes
+    distance_thresh : float
+        The distance threshold for getting distinct modes
     """
     k: int = 100
     reward_thresh: float = 8.0
-    tanimoto_thresh: float = 0.7
+    distance_thresh: float = 0.7
 
 
 @dataclass

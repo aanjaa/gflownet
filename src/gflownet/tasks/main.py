@@ -6,9 +6,9 @@ import wandb
 
 import numpy as np
 from gflownet.utils.misc import prepend_keys
-from gflownet.tasks.seh_frag import SEHFragTrainer
-from gflownet.tasks.tdc_frag import TDCFragTrainer
+
 from gflownet.config import Config
+from gflownet.online_trainer import StandardOnlineTrainer
 from gflownet.algo.config import TBVariant
 import torch
 import time
@@ -50,11 +50,16 @@ def main(hps, use_wandb=False):
     return info_final
 
 
-def get_Trainer(hps) -> Union[SEHFragTrainer, TDCFragTrainer]:
+def get_Trainer(hps) -> StandardOnlineTrainer:
     if hps["task"]["name"] == "seh_frag":
+        from gflownet.tasks.seh_frag import SEHFragTrainer
         return SEHFragTrainer
     elif hps["task"]["name"] in ["tdc_frag"]:
+        from gflownet.tasks.tdc_frag import TDCFragTrainer
         return TDCFragTrainer
+    elif hps["task"]["name"] in ["rna_bind"]:
+        from gflownet.tasks.rna_bind import RNABindTrainer
+        return RNABindTrainer
     else:
         raise ValueError(f"Unknown task!")
 
@@ -128,7 +133,7 @@ if __name__ == "__main__":
         "evaluation": {
             "k": 10,
             "reward_thresh": 8.0,
-            "tanimoto_thresh": 0.7,
+            "distance_thresh": 0.3,
         },
     }
     info_val = main(hps, use_wandb=False)
