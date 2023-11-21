@@ -119,7 +119,7 @@ if __name__ == "__main__":
             #     }
             "temperature": {
                 "sample_dist": "discrete",  # "discrete", #"uniform" #"constant"
-                "dist_params": [1 / 2, 1 / 4, 1 / 32],  # [16,32,64,96,128] ,#[0, 64.0] # [1.0]
+                "dist_params": [1.0, 2.0, 32.0], 
                 "num_thermometer_dim": 32,
             },
         },
