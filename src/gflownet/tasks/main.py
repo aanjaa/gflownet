@@ -133,7 +133,7 @@ if __name__ == "__main__":
         "evaluation": {
             "k": 10,
             "reward_thresh": 8.0,
-            "tanimoto_thresh": 0.7,
+            "distance_thresh": 0.3,
         },
     }
     info_val = main(hps, use_wandb=False)

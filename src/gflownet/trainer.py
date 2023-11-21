@@ -20,7 +20,7 @@ from gflownet.envs.seq_building_env import SeqBatch
 from gflownet.utils.misc import create_logger
 from gflownet.utils.multiprocessing_proxy import mp_object_wrapper
 from gflownet.utils.misc import prepend_keys, average_values_across_dicts
-from gflownet.utils.metrics_final_eval import candidates_eval
+from gflownet.utils.metrics_final_eval import compute_metrics
 import wandb
 import omegaconf
 from rdkit import Chem
@@ -377,12 +377,16 @@ class GFNTrainer:
 
             if (valid_freq > 0 and it % valid_freq == 0) or (it == num_training_steps):
                 info_val = []
+                candidates_eval_infos = []
                 # for batch in valid_dl:
                 # validate on at least 10 batches
-                for valid_it, (batch, _) in zip(range(10), cycle(valid_dl)):
+                for valid_it, (batch, candidates_eval_info) in zip(range(10), cycle(valid_dl)):
                     # print("valid_it", valid_it)
+                    candidates_eval_infos.append(candidates_eval_info)
                     info_val.append(self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx))
                 info_val = average_values_across_dicts(info_val)
+                metric_info = compute_metrics(candidates_eval_infos, cand_type=self.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, distance_thresh=self.cfg.evaluation.distance_thresh)
+                info_val = {**info_val, **metric_info}
                 logger.info(f"VALIDATION - iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_val.items()))
                 info_val = prepend_keys(info_val, "val")
                 self.log(info_val, it)
@@ -406,7 +410,7 @@ class GFNTrainer:
             ):
                 gen_candidates_list.append(gen_candidates_eval_info)
 
-            info_final_gen = candidates_eval(gen_candidates_list, cand_type=self.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, tanimoto_thresh=self.cfg.evaluation.tanimoto_thresh)
+            info_final_gen = compute_metrics(gen_candidates_list, cand_type=self.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, distance_thresh=self.cfg.evaluation.distance_thresh)
             logger.info("Final generation steps completed.")
             self.log(info_final_gen, it)
             logger.info(f"FINAL CANDIDATE GENERATION : " + " ".join(f"{k}:{v:.2f}" for k, v in info_final_gen.items()))
