@@ -345,6 +345,8 @@ class GFNTrainer:
         """Trains the GFN for `num_training_steps` minibatches, performing
         validation every `validate_every` minibatches.
         """
+        self.cummulative_metrics = None
+        overall_max = 0
         if logger is None:
             logger = create_logger(logfile=self.cfg.log_dir + "/train.log")
         self.model.to(self.device)
@@ -370,9 +372,11 @@ class GFNTrainer:
                 )
                 continue
             info_train = self.train_batch(batch.to(self.device), epoch_idx, batch_idx, it)
+            overall_max = max(overall_max, info_train["flat_rewards_max"])
             if it % self.print_every == 0:
                 logger.info(f"iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_train.items()))
             info_train = prepend_keys(info_train, "train")
+            # info_train["overall_max"] = overall_max
             self.log(info_train, it)
 
             if (valid_freq > 0 and it % valid_freq == 0) or (it == num_training_steps):
@@ -383,12 +387,21 @@ class GFNTrainer:
                 for valid_it, (batch, candidates_eval_info) in zip(range(10), cycle(valid_dl)):
                     # print("valid_it", valid_it)
                     candidates_eval_infos.append(candidates_eval_info)
-                    info_val.append(self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx))
+                    metrics = self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx)
+                    overall_max = max(overall_max, metrics["flat_rewards_max"])
+                    info_val.append(metrics)
                 info_val = average_values_across_dicts(info_val)
                 metric_info = compute_metrics(candidates_eval_infos, cand_type=self.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, distance_thresh=self.cfg.evaluation.distance_thresh)
                 info_val = {**info_val, **metric_info}
+                if self.cummulative_metrics is None:
+                    self.cummulative_metrics = {"cummulative_" + k: v for k, v in info_val.items()}
+                else:
+                    for k, v in info_val.items():
+                        self.cummulative_metrics["cummulative_" + k] += v
+                info_val = {**info_val, **self.cummulative_metrics}
                 logger.info(f"VALIDATION - iteration {it} : " + " ".join(f"{k}:{v:.2f}" for k, v in info_val.items()))
                 info_val = prepend_keys(info_val, "val")
+                info_val["overall_max"] = overall_max
                 self.log(info_val, it)
                 end_metrics = {}
                 for c in callbacks.values():
@@ -411,10 +424,12 @@ class GFNTrainer:
                 gen_candidates_list.append(gen_candidates_eval_info)
 
             info_final_gen = compute_metrics(gen_candidates_list, cand_type=self.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, distance_thresh=self.cfg.evaluation.distance_thresh)
+            overall_max = max(overall_max, info_final_gen["max_reward"])
             logger.info("Final generation steps completed.")
             self.log(info_final_gen, it)
             logger.info(f"FINAL CANDIDATE GENERATION : " + " ".join(f"{k}:{v:.2f}" for k, v in info_final_gen.items()))
-            info_val = {**info_val, **info_final_gen}
+            info_val = {**info_val, **info_final_gen, **self.cummulative_metrics}
+            info_val["overall_max_reward"] = overall_max
 
         return info_val
 

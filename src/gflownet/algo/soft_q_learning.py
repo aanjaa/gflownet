@@ -189,6 +189,7 @@ class SoftQLearning:
             "invalid_trajectories": invalid_mask.sum() / batch.num_online if batch.num_online > 0 else 0,
             "invalid_losses": (invalid_mask * traj_losses).sum() / (invalid_mask.sum() + 1e-4),
             "flat_rewards": batch.flat_rewards.mean().item(),
+            "flat_rewards_max": batch.flat_rewards.max().item(),
         }
 
         if not torch.isfinite(traj_losses).all():
