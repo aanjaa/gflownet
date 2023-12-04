@@ -13,4 +13,5 @@ pip install torch_sparse-0.6.17+pt113cu117-cp39-cp39-linux_x86_64.whl
 cd ~/gflownet
 pip install torch==1.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
 pip install -e . --find-links https://data.pyg.org/whl/torch-1.13.1+cu117.html
-pip install -U "ray[air]" PyTDC flexs levenshtein wandb
+pip install PyTDC flexs levenshtein wandb
+pip install ray==2.6.2

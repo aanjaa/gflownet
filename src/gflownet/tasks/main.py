@@ -69,10 +69,10 @@ if __name__ == "__main__":
         "log_dir": f"./logs/mol_eval",  # _{time.strftime('%Y-%m-%d_%H-%M-%S')
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 10000,  # 10_000,
+        "num_training_steps": 1000,  # 10_000,
         "print_every": 10,
         "validate_every": 100,
-        "num_workers": 6,
+        "num_workers": 8,
         "num_final_gen_steps": 2,
         "opt": {
             "lr_decay": 20_000,
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         },
         "replay": {
             "use": True,
-            "capacity": 1000,  # 100,
+            "capacity": 100,  # 100,
             "warmup": 1,  # 10,
             "hindsight_ratio": 0.0,
             "insertion": {
@@ -119,21 +119,21 @@ if __name__ == "__main__":
             #     }
             "temperature": {
                 "sample_dist": "discrete",  # "discrete", #"uniform" #"constant"
-                "dist_params": [16,32,64,96] ,#[0, 64.0] # [1.0]
+                "dist_params": [1.0, 2.0, 32.0], 
                 "num_thermometer_dim": 32,
             },
         },
         "task": {
-            "name": "rna_bind",
-            # "helper": "rna",
-            # "tdc": {
-            #     "oracle": "qed",
-            # },
+            "name": "tdc_frag",
+            "helper": "tdc_frag",
+            "tdc": {
+                "oracle": "qed",
+            },
         },
         "evaluation": {
             "k": 10,
-            "reward_thresh": 0.7,
+            "reward_thresh": 8.0,
             "distance_thresh": 0.3,
         },
     }
-    info_val = main(hps, use_wandb=True)
+    info_val = main(hps, use_wandb=False)

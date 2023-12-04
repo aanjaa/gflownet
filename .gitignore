@@ -150,3 +150,7 @@ bash/
 
 #Slurm output scripts
 *.out
+
+# Setup scripts
+recreate_env_updated.sh
+recreate_env_outdated.sh

@@ -166,39 +166,34 @@ def log_dir_config(name):
 
 
 def exploration_config(exploration_strategy):
-    if exploration_strategy == "e_random":
+    if exploration_strategy == "e_random_action":
         return {
             "algo.train_random_action_prob": tune.choice([0.001, 0.005, 0.01, 0.05]),
             "algo.valid_random_action_prob": 0,
         }
-
-    elif exploration_strategy == "tempered":
+    
+    elif exploration_strategy == "e_random_traj":
         return {
-            "cond.temperature.sample_dist": "constant",
-            "cond.temperature.dist_params": tune.choice([1, 1 / 2, 1 / 4, 1 / 8, 1 / 16, 1 / 32]),
-            "cond.temperature.num_thermometer_dim": 1,
+            "algo.train_random_traj_prob": tune.choice([]), #TODO
         }
 
-    elif exploration_strategy == "exploitation":
+    elif exploration_strategy == "temp_fixed":
         return {
             "cond.temperature.sample_dist": "constant",
-            "cond.temperature.dist_params": tune.choice([1, 2, 4, 8, 16, 32]),
+            "cond.temperature.dist_params": tune.choice([96]), #TODO: any other values to try?
             "cond.temperature.num_thermometer_dim": 1,
         }
+    
     elif exploration_strategy == "temp_cond":
         return {
             "cond.temperature.sample_dist": "discrete",
-            "cond.temperature.dist_params": [
-                1 / 2,
-                1 / 4,
-                1 / 8,
-                1 / 16,
-                1 / 32,
-            ],  # tune.choice([[1/2,1/4,1/32],[1/2,1/4,1/8,1/16,1/32]]),
-            "cond.temperature.num_thermometer_dim": 32,
+            "cond.temperature.dist_params": [1,2,4,8,16,32,64,96], 
+            "cond.temperature.num_thermometer_dim": 96,
         }
+    
     elif exploration_strategy == "no_exploration":
         return {}
+    
     else:
         raise ValueError(f"Exploration strategy {exploration_strategy} not supported")
 
@@ -211,19 +206,21 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpus", type=int, default=1)
     parser.add_argument("--num_cpus", type=int, default=4)
     parser.add_argument("--num_samples", type=int, default=1)
+    parser.add_argument("--placement_cpu", type=float, default=1.0)
+    parser.add_argument("--placement_gpu", type=float, default=0.5)
     args = parser.parse_args()
 
     # TODO: add exploration helper
 
     # group_factory = tune.PlacementGroupFactory([{'CPU': 4.0, 'GPU': .25}])
     group_factory = tune.PlacementGroupFactory(
-        [{"CPU": args.num_cpus / args.num_samples, "GPU": args.num_gpus / args.num_samples}]
+        [{"CPU": args.placement_cpu, "GPU": args.placement_gpu}]
     )
-    num_workers = 8
+    num_workers = 3
 
-    num_training_steps = 1000  # 15_650 #10_000
-    validate_every = 100  # 1000 #1000
-    num_final_gen_steps = 100  # 320
+    num_training_steps = 15650 #1000 # 15_650 #10_000
+    validate_every = 1000  #100 # 1000 #1000
+    num_final_gen_steps = 320 #100 # 320
 
     # metric = "val_loss"
     # mode = "min"
@@ -233,9 +230,9 @@ if __name__ == "__main__":
     training_objectives = ["TB", "FM", "SubTB1", "DB"]
     tasks = ["seh_frag", "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
-    exploration_strategies = ["no_exploration", "e_random", "tempered", "exploitation", "temp_cond"]
+    exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration"]
 
-    buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power" 3x3x4x2
+    buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power" 
     buffer_insertions = ["fifo", "reward", "diversity", "diversity_and_reward"]
     buffer_sizes = [1000, 10_000]
 
@@ -268,6 +265,7 @@ if __name__ == "__main__":
             "illegal_action_logreward": -75,
             "train_random_action_prob": 0.0,
             "valid_random_action_prob": 0.0,
+            "train_random_traj_prob": 0.0,
             "valid_sample_cond_info": True,
             "tb": {
                 "variant": TBVariant.TB,
