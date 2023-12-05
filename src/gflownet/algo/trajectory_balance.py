@@ -505,7 +505,8 @@ class TrajectoryBalance(GFNAlgorithm):
             "invalid_losses": (invalid_mask * traj_losses).sum() / (invalid_mask.sum() + 1e-4),
             "logZ": log_Z.mean(),
             "loss": loss.item(),
-            "flat_rewards": batch.flat_rewards.mean().item()
+            "flat_rewards": batch.flat_rewards.mean().item(),
+            "flat_rewards_max": batch.flat_rewards.max().item(),
         }
         return loss, info
 

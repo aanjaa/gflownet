@@ -171,6 +171,9 @@ class A2C:
             "A": A.mean(),
             "invalid_trajectories": invalid_mask.sum() / batch.num_online if batch.num_online > 0 else 0,
             "loss": loss.item(),
+            "flat_rewards": rewards.mean().item(),
+            "flat_rewards_max": rewards.max().item(),
+
         }
 
         if not torch.isfinite(loss).all():

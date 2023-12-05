@@ -192,5 +192,6 @@ class FlowMatching(TrajectoryBalance):  # TODO: FM inherits from TB but we could
             "loss": loss.item(),
             "logZ": logZ.mean().item(),
             "flat_rewards": batch.flat_rewards.mean().item(),
+            "flat_rewards_max": batch.flat_rewards.max().item(),
         }
         return loss, info
