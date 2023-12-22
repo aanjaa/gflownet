@@ -3,6 +3,8 @@ import shutil
 import socket
 from typing import Callable, Dict, List, Tuple, Union
 import wandb
+from omegaconf import OmegaConf
+import copy
 
 import numpy as np
 from gflownet.utils.misc import prepend_keys
@@ -14,6 +16,11 @@ import torch
 import time
 
 
+"""
+ulimit -n 65535
+python -m gflownet.tasks.main task.name=seh_frag wandb=true
+python -m gflownet.tasks.main task.name=seh_frag algo.method=TB algo.tb.variant=2 model.separate_flow=true
+"""
 def main(hps, use_wandb=False):
     # hps must contain task.name, log_dir, overwrite_existing_exp
 
@@ -21,9 +28,16 @@ def main(hps, use_wandb=False):
     start_time = time.time()
 
     if use_wandb:
-        wandb.init(
-            project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
-        )
+        # wandb.init(project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True)
+
+        # hps.algo.tb.variant is an enum, which is not serializable by wandb
+        copy_hps = copy.deepcopy(hps)
+        copy_hps.algo.tb.variant = str(copy_hps.algo.tb.variant)
+        copy_hps = OmegaConf.to_container(copy_hps, resolve=True)
+        wandb.init(name=hps["log_dir"].split("/")[-1], config=copy_hps, sync_tensorboard=True)
+        # otherwise the omegaconf cannot be merged
+        del hps.wandb
+
 
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
@@ -136,4 +150,8 @@ if __name__ == "__main__":
             "distance_thresh": 0.3,
         },
     }
-    info_val = main(hps, use_wandb=False)
+
+    cli_cfg = OmegaConf.from_cli()  # from command line
+    hps = OmegaConf.merge(hps, cli_cfg)
+    # info_val = main(hps, use_wandb=False)
+    info_val = main(hps, use_wandb=getattr(hps, "wandb", False))

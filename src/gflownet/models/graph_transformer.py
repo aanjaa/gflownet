@@ -190,6 +190,9 @@ class GraphTransformerGFN(nn.Module):
         self.do_separate_p_b = cfg.model.do_separate_p_b
         if cfg.model.do_separate_p_b:
             self.bck_trunk = self._make_trunk(env_ctx, cfg)
+        self.separate_flow = cfg.model.separate_flow
+        if self.separate_flow:
+            self.flow_trunk = self._make_trunk(env_ctx, cfg)
         num_emb = cfg.model.num_emb
         num_final = num_emb
         num_glob_final = num_emb * 2
@@ -299,7 +302,11 @@ class GraphTransformerGFN(nn.Module):
         else:
             bck_embs = embs
 
-        graph_out = self.emb2graph_out(embs["graph"])
+        if self.separate_flow:
+            flow_embs = self._compute_embs(self.flow_trunk, g, cond)
+            graph_out = self.emb2graph_out(flow_embs["graph"])
+        else:
+            graph_out = self.emb2graph_out(embs["graph"])
         fwd_cat = self._make_cat(g, embs, self.action_type_order)
         if self.do_bck:
             bck_cat = self._make_cat(g, bck_embs, self.bck_action_type_order)

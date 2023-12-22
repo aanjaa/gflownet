@@ -41,5 +41,6 @@ class ModelConfig:
     num_emb: int = 128
     dropout: float = 0
     do_separate_p_b: bool = False
+    separate_flow: bool = False
     graph_transformer: GraphTransformerConfig = GraphTransformerConfig()
     seq_transformer: SeqTransformerConfig = SeqTransformerConfig()

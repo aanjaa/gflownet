@@ -218,7 +218,7 @@ if __name__ == "__main__":
     )
     num_workers = 3
 
-    num_training_steps = 15650 #1000 # 15_650 #10_000
+    num_training_steps = 15650 #1000 # 15_650 #10_000 # 1 million divided by 64 = 15625
     validate_every = 1000  #100 # 1000 #1000
     num_final_gen_steps = 320 #100 # 320
 
