@@ -168,13 +168,13 @@ def log_dir_config(name):
 def exploration_config(exploration_strategy):
     if exploration_strategy == "e_random_action":
         return {
-            "algo.train_random_action_prob": tune.choice([0.001, 0.005, 0.01, 0.05]),
+            "algo.train_random_action_prob": tune.choice([0.001, 0.005, 0.01, 0.05, 0.1]),
             "algo.valid_random_action_prob": 0,
         }
     
     elif exploration_strategy == "e_random_traj":
         return {
-            "algo.train_random_traj_prob": tune.choice([]), #TODO
+            "algo.train_random_traj_prob": tune.choice([0.001, 0.005, 0.01, 0.05, 0.1]), 
         }
 
     elif exploration_strategy == "temp_fixed":
@@ -188,7 +188,7 @@ def exploration_config(exploration_strategy):
         return {
             "cond.temperature.sample_dist": "discrete",
             "cond.temperature.dist_params": [1,2,4,8,16,32,64,96], 
-            "cond.temperature.num_thermometer_dim": 96,
+            "cond.temperature.num_thermometer_dim": 32,
         }
     
     elif exploration_strategy == "no_exploration":
@@ -207,10 +207,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_cpus", type=int, default=4)
     parser.add_argument("--num_samples", type=int, default=1)
     parser.add_argument("--placement_cpu", type=float, default=1.0)
-    parser.add_argument("--placement_gpu", type=float, default=0.5)
+    parser.add_argument("--placement_gpu", type=float, default=1.0)
     args = parser.parse_args()
-
-    # TODO: add exploration helper
 
     # group_factory = tune.PlacementGroupFactory([{'CPU': 4.0, 'GPU': .25}])
     group_factory = tune.PlacementGroupFactory(
@@ -228,7 +226,7 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives = ["TB", "FM", "SubTB1", "DB"]
-    tasks = ["seh_frag", "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    tasks = ["seh_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration"]
 
@@ -253,6 +251,7 @@ if __name__ == "__main__":
         "num_workers": num_workers,
         "num_final_gen_steps": num_final_gen_steps,
         "overwrite_existing_exp": True,
+        "exploration_helper": "no_exploration",
         "algo": {
             "method": "TB",
             "helper": "TB",
@@ -343,7 +342,7 @@ if __name__ == "__main__":
     search_spaces = []
 
     if args.experiment_name == "training_objectives":
-        for task in tasks:  # ["sa_frag"]: #tasks:
+        for task in tasks: 
             for training_objective in training_objectives:
                 name = f"{task}_{training_objective}"
                 changes_config = {
@@ -390,6 +389,7 @@ if __name__ == "__main__":
                     **task_config(task),
                     **shared_search_space,
                     **exploration_config(exploration_strategy),
+                    "exploration_helper": exploration_strategy,
                 }
                 search_spaces.append(change_config(copy.deepcopy(config), changes_config))
 
