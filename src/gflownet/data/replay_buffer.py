@@ -166,7 +166,7 @@ class ReplayBuffer(object):
             idxs = self.rng.choice(len(self.buffer), batch_size)
 
         elif self.sampling_strategy == "weighted":
-            rewards = torch.tensor([traj.flat_reward for traj in self.buffer])
+            rewards = torch.tensor([traj.flat_reward for (_,traj) in self.buffer])
             # Raise reward to the power of reward_power
             rewards = rewards ** self.reward_power
             # Get probabilities proportional to rewards
