@@ -121,3 +121,4 @@ class Config:
     task: TasksConfig = TasksConfig()
     cond: ConditionalsConfig = ConditionalsConfig()
     evaluation: EvaluationConfig = EvaluationConfig()
+    exploration_helper: Optional[str] = ""
