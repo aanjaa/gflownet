@@ -168,32 +168,37 @@ def log_dir_config(name):
 def exploration_config(exploration_strategy):
     if exploration_strategy == "e_random_action":
         return {
-            "algo.train_random_action_prob": tune.choice([0.001, 0.005, 0.01, 0.05]),
+            "algo.train_random_action_prob": tune.choice([0.01, 0.05, 0.1, 0.15, 0.2]),
             "algo.valid_random_action_prob": 0,
         }
     
     elif exploration_strategy == "e_random_traj":
         return {
-            "algo.train_random_traj_prob": tune.choice([]), #TODO
+            "algo.train_random_traj_prob": tune.choice([0.1, 0.2, 0.3, 0.4, 0.5]), #TODO
         }
 
     elif exploration_strategy == "temp_fixed":
         return {
-            "cond.temperature.sample_dist": "constant",
-            "cond.temperature.dist_params": tune.choice([96]), #TODO: any other values to try?
-            "cond.temperature.num_thermometer_dim": 1,
+            "algo.sample_temp": tune.choice([0.5, 0.9, 1, 1.1, 1.5, 2]),
+            # "cond.temperature.dist_params": tune.choice([96, 48, 32, 16, 8]), #TODO: any other values to try?
+            # "cond.temperature.num_thermometer_dim": 1,
         }
     
     elif exploration_strategy == "temp_cond":
         return {
             "cond.temperature.sample_dist": "discrete",
             "cond.temperature.dist_params": [1,2,4,8,16,32,64,96], 
-            "cond.temperature.num_thermometer_dim": 96,
+            "cond.temperature.num_thermometer_dim": 50,
         }
     
     elif exploration_strategy == "no_exploration":
         return {}
-    
+    elif exploration_strategy == "temp_and_random_action":
+        return {
+            "algo.train_random_action_prob": tune.choice([0.01, 0.05, 0.1]),
+            "algo.valid_random_action_prob": 0,
+            "algo.sample_temp": tune.choice([0.9, 1, 1.1]),
+        }
     else:
         raise ValueError(f"Exploration strategy {exploration_strategy} not supported")
 
@@ -216,7 +221,7 @@ if __name__ == "__main__":
     group_factory = tune.PlacementGroupFactory(
         [{"CPU": args.placement_cpu, "GPU": args.placement_gpu}]
     )
-    num_workers = 3
+    num_workers = 4
 
     num_training_steps = 15650 #1000 # 15_650 #10_000
     validate_every = 1000  #100 # 1000 #1000
@@ -230,7 +235,7 @@ if __name__ == "__main__":
     training_objectives = ["TB", "FM", "SubTB1", "DB"]
     tasks = ["seh_frag", "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
-    exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration"]
+    exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action"]
 
     buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power" 
     buffer_insertions = ["fifo", "reward", "diversity", "diversity_and_reward"]
@@ -316,15 +321,15 @@ if __name__ == "__main__":
         "cond": {
             "temperature": {
                 "sample_dist": "constant",  # "uniform"
-                "dist_params": [1.0],  # [0, 64.0],  #[16,32,64,96,128]
+                "dist_params": [16.0],  # [0, 64.0],  #[16,32,64,96,128]
                 "num_thermometer_dim": 1,
             }
         },
         "task": {"name": "seh_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
         "evaluation": {
             "k": 100,
-            "reward_thresh": 8.0,
-            "distance_thresh": 0.7,
+            "reward_thresh": 0.8,
+            "distance_thresh": 0.3,
         },
     }
 
