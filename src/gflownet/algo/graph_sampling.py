@@ -56,7 +56,7 @@ class GraphSampler:
         self.consider_masks_complete = ctx.consider_masks_complete if hasattr(ctx, "consider_masks_complete") else False
 
     def sample_from_model(
-        self, model: nn.Module, n: int, cond_info: Tensor, dev: torch.device, random_action_prob: float = 0.0
+        self, model: nn.Module, n: int, cond_info: Tensor, dev: torch.device, random_action_prob: float = 0.0, temper: bool = True
     ):
         """Samples a model in a minibatch
 
@@ -70,7 +70,10 @@ class GraphSampler:
             Conditional information of each trajectory, shape (n, n_info)
         dev: torch.device
             Device on which data is manipulated
-
+        random_action_prob: float
+            Probability of taking a random action
+        temper: bool
+            Whether to apply temperature to the logits
         Returns
         -------
         data: List[Dict]
@@ -121,7 +124,7 @@ class GraphSampler:
                     is_random_action[b][:, None] * torch.ones_like(i) * m * 100 + i * (1 - is_random_action[b][:, None])
                     for i, m, b in zip(fwd_cat.logits, masks, fwd_cat.batch)
                 ]
-            if self.sample_temp != 1:
+            if self.sample_temp != 1 and temper:
                 sample_cat = copy.copy(fwd_cat)
                 sample_cat.logits = [i / self.sample_temp for i in fwd_cat.logits]
                 actions = sample_cat.sample()

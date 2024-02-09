@@ -271,6 +271,7 @@ class GFNTrainer:
             sample_cond_info=self.cfg.algo.valid_sample_cond_info,
             stream=False,
             random_action_prob=self.cfg.algo.valid_random_action_prob,
+            is_validation=True,
         )
         for hook in self.valid_sampling_hooks:
             iterator.add_log_hook(hook)
@@ -303,6 +304,7 @@ class GFNTrainer:
             stream=False,
             random_action_prob=self.cfg.algo.valid_random_action_prob,
             hindsight_ratio=0.0,
+            is_validation=True,
             # init_train_iter=self.cfg.num_training_steps,
         )
         for hook in self.sampling_hooks:

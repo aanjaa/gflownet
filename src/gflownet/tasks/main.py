@@ -22,7 +22,7 @@ def main(hps, use_wandb=False):
 
     if use_wandb:
         wandb.init(
-            project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
+            entity="evaluating-gfns", project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
         )
 
     if os.path.exists(hps["log_dir"]):
@@ -121,6 +121,7 @@ if __name__ == "__main__":
                 "sample_dist": "discrete",  # "discrete", #"uniform" #"constant"
                 "dist_params": [1.0, 2.0, 32.0], 
                 "num_thermometer_dim": 32,
+                "val_temp": 32.0,
             },
         },
         "task": {

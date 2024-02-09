@@ -55,8 +55,8 @@ class SEHTask(GFNTask):
         model, self.device = self._wrap_model(model, send_to_device=True)
         return {"seh": model}
 
-    def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, Tensor]:
-        return self.temperature_conditional.sample(n)
+    def sample_conditional_information(self, n: int, train_it: int, is_validation: bool = False) -> Dict[str, Tensor]:
+        return self.temperature_conditional.sample(n, is_validation)
 
     def cond_info_to_logreward(self, cond_info: Dict[str, Tensor], flat_reward: FlatRewards) -> RewardScalar:
         return RewardScalar(self.temperature_conditional.transform(cond_info, flat_reward))

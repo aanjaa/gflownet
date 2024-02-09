@@ -44,6 +44,7 @@ class SamplingIterator(IterableDataset):
         random_traj_prob: float = 0.0,
         hindsight_ratio: float = 0.0,
         init_train_iter: int = 0,
+        is_validation: bool = False
     ):
         """Parameters
         ----------
@@ -107,6 +108,7 @@ class SamplingIterator(IterableDataset):
         self.random_traj_prob = random_traj_prob
         self.hindsight_ratio = hindsight_ratio
         self.train_it = init_train_iter
+        self.is_validation = is_validation
         self.do_validate_batch = False  # Turn this on for debugging
 
         # Slightly weird semantics, but if we're sampling x given some fixed cond info (data)
@@ -182,7 +184,7 @@ class SamplingIterator(IterableDataset):
             if self.sample_cond_info:
                 num_online = self.online_batch_size
                 cond_info = self.task.sample_conditional_information(
-                    num_offline + self.online_batch_size, self.train_it
+                    num_offline + self.online_batch_size, self.train_it, self.is_validation
                 )
 
                 # Sample some dataset data
@@ -212,6 +214,7 @@ class SamplingIterator(IterableDataset):
                         cond_info["encoding"][num_offline:],
                         random_action_prob=self.random_action_prob,
                         random_traj_prob=self.random_traj_prob,
+                        temper=not self.is_validation,
                     )
                 if self.algo.bootstrap_own_reward:
                     # The model can be trained to predict its own reward,

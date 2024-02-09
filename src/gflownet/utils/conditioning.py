@@ -51,9 +51,15 @@ class TemperatureConditional(Conditional):
     def encoding_size(self):
         return self.cfg.cond.temperature.num_thermometer_dim
 
-    def sample(self, n):
+    def sample(self, n: int, is_validation: bool = False):
         cfg = self.cfg.cond.temperature
         beta = None
+        
+        if is_validation:
+            beta = torch.tensor([cfg.val_temp]).float().repeat(n)
+            beta_enc = thermometer(torch.tensor(beta), cfg.num_thermometer_dim, 0, self.upper_bound)
+            return {"beta": beta, "encoding": beta_enc}
+        
         if cfg.sample_dist == "constant":
             assert type(cfg.dist_params[0]) is float
             beta = np.array(cfg.dist_params[0]).repeat(n).astype(np.float32)
