@@ -20,8 +20,9 @@ from gflownet.trainer import FlatRewards, GFNTask, RewardScalar
 from gflownet.utils.conditioning import TemperatureConditional
 
 AMINO_ACID_VOCAB = list('ILVAGMFYWEDQNHCRKSTP')
+AMINO_ACID_VOCAB = ['L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W']
 _vocab = deepcopy(AMINO_ACID_VOCAB)
-_vocab.remove('C')
+#_vocab.remove('C')
 
 _REPO_IDX_TO_CHAR = {idx: char for idx, char in enumerate(_vocab)}
 _SUPPRESS_AAS = {'C'}
@@ -82,6 +83,7 @@ class ESMLogLikelihoodTask(GFNTask):
             if char in self.esm_reward_calculator.allowed_AA
         }
 
+
     def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, torch.Tensor]:
         return self.temperature_conditional.sample(n)
 
@@ -141,7 +143,7 @@ class ESMLogLikelihoodTrainer(StandardOnlineTrainer):
     def set_default_hps(self, cfg: Config):
         cfg.hostname = socket.gethostname()
         cfg.pickle_mp_messages = False
-        cfg.num_workers = 8
+        cfg.num_workers = 0
         cfg.opt.learning_rate = 1e-4
         cfg.opt.weight_decay = 1e-8
         cfg.opt.momentum = 0.9
@@ -150,18 +152,16 @@ class ESMLogLikelihoodTrainer(StandardOnlineTrainer):
         cfg.opt.clip_grad_type = "norm"
         cfg.opt.clip_grad_param = 10
         cfg.algo.global_batch_size = 64
-        cfg.algo.offline_ratio = 0
         cfg.model.num_emb = 64
         cfg.model.num_layers = 4
 
         cfg.algo.method = "TB"
-        cfg.algo.max_nodes = 10
-        cfg.algo.max_len = 10
+        cfg.algo.max_nodes = 30
+        cfg.algo.max_len = 30
         cfg.algo.sampling_tau = 0.9
         cfg.algo.illegal_action_logreward = -75
         cfg.algo.train_random_action_prob = 0.0
         cfg.algo.valid_random_action_prob = 0.0
-        cfg.algo.valid_offline_ratio = 0
         cfg.algo.tb.epsilon = None
         cfg.algo.tb.bootstrap_own_reward = False
         cfg.algo.tb.Z_learning_rate = 1e-2
@@ -172,6 +172,7 @@ class ESMLogLikelihoodTrainer(StandardOnlineTrainer):
         self.model = SeqTransformerGFN(
             self.ctx,
             self.cfg,
+            min_len=30
         )
 
     def setup_task(self):
@@ -183,7 +184,7 @@ class ESMLogLikelihoodTrainer(StandardOnlineTrainer):
     def setup_env_context(self):
         self.env = SeqBuildingEnv(None)
         self.ctx = AutoregressiveSeqBuildingContext(
-            "abc",
+            AMINO_ACID_VOCAB,
             self.task.num_cond_dim,
         )
 

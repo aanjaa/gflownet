@@ -156,6 +156,9 @@ def task_config(task):
     elif task == "sa_frag":
         task_name = "tdc_frag"
         oracle = "sa"
+
+    elif task == "esm_log_likelihood":
+        return {"task.name": task}
     else:
         raise ValueError(f"Task {task} not supported")
     return {"task.name": task_name, "task.helper": task, "task.tdc.oracle": oracle}
@@ -171,7 +174,7 @@ def exploration_config(exploration_strategy):
             "algo.train_random_action_prob": tune.choice([0.001, 0.005, 0.01, 0.05]),
             "algo.valid_random_action_prob": 0,
         }
-    
+
     elif exploration_strategy == "e_random_traj":
         return {
             "algo.train_random_traj_prob": tune.choice([]), #TODO
@@ -183,17 +186,17 @@ def exploration_config(exploration_strategy):
             "cond.temperature.dist_params": tune.choice([96]), #TODO: any other values to try?
             "cond.temperature.num_thermometer_dim": 1,
         }
-    
+
     elif exploration_strategy == "temp_cond":
         return {
             "cond.temperature.sample_dist": "discrete",
-            "cond.temperature.dist_params": [1,2,4,8,16,32,64,96], 
+            "cond.temperature.dist_params": [1,2,4,8,16,32,64,96],
             "cond.temperature.num_thermometer_dim": 96,
         }
-    
+
     elif exploration_strategy == "no_exploration":
         return {}
-    
+
     else:
         raise ValueError(f"Exploration strategy {exploration_strategy} not supported")
 
@@ -228,11 +231,11 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives = ["TB", "FM", "SubTB1", "DB"]
-    tasks = ["seh_frag", "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    tasks = ["esm_log_likelihood"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration"]
 
-    buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power" 
+    buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power"
     buffer_insertions = ["fifo", "reward", "diversity", "diversity_and_reward"]
     buffer_sizes = [1000, 10_000]
 
@@ -261,7 +264,7 @@ if __name__ == "__main__":
             "online_batch_size": 64,
             "replay_batch_size": 32,
             "offline_batch_size": 0,
-            "max_nodes": 9,
+            "max_nodes": 30,
             "illegal_action_logreward": -75,
             "train_random_action_prob": 0.0,
             "valid_random_action_prob": 0.0,
@@ -320,7 +323,7 @@ if __name__ == "__main__":
                 "num_thermometer_dim": 1,
             }
         },
-        "task": {"name": "seh_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
+        "task": {"name": "esm_log_likelihood"},
         "evaluation": {
             "k": 100,
             "reward_thresh": 8.0,

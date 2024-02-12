@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, NewType, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.multiprocessing as mp
 import torch.utils.tensorboard
 import torch_geometric.data as gd
 from omegaconf import OmegaConf
@@ -26,6 +27,8 @@ import omegaconf
 from rdkit import Chem
 
 from .config import Config
+
+#mp.set_start_method('spawn')
 
 # This type represents an unprocessed list of reward signals/conditioning information
 FlatRewards = NewType("FlatRewards", Tensor)  # type: ignore

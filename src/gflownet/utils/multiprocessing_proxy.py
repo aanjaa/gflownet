@@ -22,6 +22,7 @@ class MPObjectPlaceholder:
         if self._is_init:
             return
         info = torch.utils.data.get_worker_info()
+        print(f'Info is: {info}')
         self.in_queue = self.qs[0][info.id]
         self.out_queue = self.qs[1][info.id]
         self._is_init = True

@@ -60,6 +60,9 @@ def get_Trainer(hps) -> StandardOnlineTrainer:
     elif hps["task"]["name"] in ["rna_bind"]:
         from gflownet.tasks.rna_bind import RNABindTrainer
         return RNABindTrainer
+    elif hps["task"]["name"] == "esm_log_likelihood":
+        from gflownet.tasks.esm_log_likelihood_reward import ESMLogLikelihoodTrainer
+        return ESMLogLikelihoodTrainer
     else:
         raise ValueError(f"Unknown task!")
 
@@ -119,7 +122,7 @@ if __name__ == "__main__":
             #     }
             "temperature": {
                 "sample_dist": "discrete",  # "discrete", #"uniform" #"constant"
-                "dist_params": [1.0, 2.0, 32.0], 
+                "dist_params": [1.0, 2.0, 32.0],
                 "num_thermometer_dim": 32,
             },
         },
