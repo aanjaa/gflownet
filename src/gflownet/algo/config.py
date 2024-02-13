@@ -9,6 +9,7 @@ class TBVariant(Enum):
     TB = 0
     SubTB1 = 1
     DB = 2
+    DB_sepflow = 3
 
 
 @dataclass

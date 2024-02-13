@@ -8,6 +8,7 @@ from torch_geometric.utils import add_self_loops
 
 from gflownet.config import Config
 from gflownet.envs.graph_building_env import GraphActionCategorical, GraphActionType
+from gflownet.algo.config import TBVariant
 
 
 def mlp(n_in, n_hid, n_out, n_layer, act=nn.LeakyReLU):
@@ -188,9 +189,9 @@ class GraphTransformerGFN(nn.Module):
         super().__init__()
         self.trunk = self._make_trunk(env_ctx, cfg)
         self.do_separate_p_b = cfg.model.do_separate_p_b
-        if cfg.model.do_separate_p_b:
+        if self.do_separate_p_b:
             self.bck_trunk = self._make_trunk(env_ctx, cfg)
-        self.separate_flow = cfg.model.separate_flow
+        self.separate_flow = cfg.algo.tb.variant in [TBVariant.DB_sepflow,]
         if self.separate_flow:
             self.flow_trunk = self._make_trunk(env_ctx, cfg)
         num_emb = cfg.model.num_emb

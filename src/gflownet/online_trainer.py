@@ -57,7 +57,7 @@ class StandardOnlineTrainer(GFNTrainer):
             non_Z_params = list(self.model.parameters())
 
         # set Z param as flow trunk
-        if self.cfg.model.separate_flow:
+        if self.model.separate_flow:
             Z_params = list(self.model.flow_trunk.parameters())
             non_Z_params = [i for i in self.model.parameters() if all(id(i) != id(j) for j in Z_params)]
 

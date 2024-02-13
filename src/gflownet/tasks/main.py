@@ -19,7 +19,7 @@ import time
 """
 ulimit -n 65535
 python -m gflownet.tasks.main task.name=seh_frag wandb=true
-python -m gflownet.tasks.main task.name=seh_frag algo.method=TB algo.tb.variant=2 model.separate_flow=true
+python -m gflownet.tasks.main task.name=seh_frag algo.method=TB algo.tb.variant=3
 """
 def main(hps, use_wandb=False):
     # hps must contain task.name, log_dir, overwrite_existing_exp
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         "log_dir": f"./logs/mol_eval",  # _{time.strftime('%Y-%m-%d_%H-%M-%S')
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
-        "num_training_steps": 1000,  # 10_000,
+        "num_training_steps": 15650,  # 10_000,
         "print_every": 10,
         "validate_every": 100,
         "num_workers": 8,

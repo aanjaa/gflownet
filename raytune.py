@@ -130,6 +130,10 @@ def method_config(training_objective):
         method = "TB"
         variant = TBVariant.DB
         method_name = "DB"
+    elif training_objective == "DB_sepflow":
+        method = "TB"
+        variant = TBVariant.DB_sepflow
+        method_name = "DB_sepflow"
     else:
         raise ValueError(f"Training objective {training_objective} not supported")
 
@@ -227,8 +231,8 @@ if __name__ == "__main__":
     metric = "avg_reward_in_topk_modes"
     mode = "max"
 
-    training_objectives = ["TB", "FM", "SubTB1", "DB"]
-    tasks = ["seh_frag", "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    training_objectives = ["TB", "FM", "SubTB1", "DB", "DB_sepflow"]
+    tasks = ["seh_frag",]  #"qed_frag", "drd2_frag", 'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration"]
 
