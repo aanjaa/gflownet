@@ -57,7 +57,10 @@ class TemperatureConditional(Conditional):
         
         if is_validation:
             beta = torch.tensor([cfg.val_temp]).float().repeat(n)
-            beta_enc = thermometer(torch.tensor(beta), cfg.num_thermometer_dim, 0, self.upper_bound)
+            if cfg.sample_dist == "constant":
+                beta_enc = torch.zeros((n, cfg.num_thermometer_dim))
+            else:
+                beta_enc = thermometer(torch.tensor(beta), cfg.num_thermometer_dim, 0, self.upper_bound)
             return {"beta": beta, "encoding": beta_enc}
         
         if cfg.sample_dist == "constant":
