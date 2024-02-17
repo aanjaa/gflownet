@@ -230,8 +230,8 @@ if __name__ == "__main__":
     metric = "avg_reward_in_topk_modes"
     mode = "max"
 
-    training_objectives = ["TB", "FM", "SubTB1", "DB"]
-    tasks = ["seh_frag", "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    training_objectives = ["FM"] #["TB", "FM", "SubTB1", "DB"]
+    tasks = ["seh_frag"] #, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["no_exploration", "e_random", "tempered", "exploitation", "temp_cond"]
 
