@@ -87,6 +87,7 @@ def run_raytune(search_space):
     # Generate txt files
     if results.errors:
         print("ERROR!")
+        print(results.errors)
     else:
         print("No errors!")
     if results.errors:
@@ -205,7 +206,7 @@ def exploration_config(exploration_strategy):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--experiment_name", type=str, default="exploration")
+    parser.add_argument("--experiment_name", type=str, default="training_objectives")
     parser.add_argument("--idx", type=int, default=0, help="Run number in an experiment")
     parser.add_argument("--prepend_name", type=str, default="debug_")
     parser.add_argument("--num_gpus", type=int, default=1)
@@ -230,7 +231,7 @@ if __name__ == "__main__":
     metric = "avg_reward_in_topk_modes"
     mode = "max"
 
-    training_objectives = ["TB", "FM", "SubTB1", "DB"]
+    training_objectives = ["FM", "DB", "SubTB1", "TB"]
     tasks = ["seh_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action"]
