@@ -1,12 +1,12 @@
 #!/bin/bash
 experiment_num=0 # change the number of experiment you want to run 0--> training objective, 1--> buffer, 2--> exploration
-prepend_name="final_" #prepend to the name of experiment
+prepend_name="a100l_1_" #prepend to the name of experiment
 num_random_samples=20 #8 #how many times to sample from shared search space
-num_gpus=2 #4 #2 
-num_cpus=16 #32 #16 
+num_gpus=1 #4 #2 
+num_cpus=4 #32 #16 
 mem=100 #256 #100 #how much memory to allocate in GB
 placement_gpu=1
-placement_cpu=8
+placement_cpu=4
 
 experiment_names_list=("training_objectives" "buffer" "exploration")
 num_trials_list=(4 73 15) #Change depending on how many configs you have for each experiment
