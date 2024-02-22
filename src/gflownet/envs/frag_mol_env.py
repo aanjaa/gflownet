@@ -265,7 +265,7 @@ class FragMolBuildingEnvContext(GraphBuildingEnvContext):
         stop_mask = torch.zeros((1, 1)) if has_unfilled_attach or not len(g) else torch.ones((1, 1))
         # We want to respect the min_len constraint, but it's possible to create a graph which is complete before having
         # reached min_len, e.g. if the agent adds two fragments of degree 1, then it can't add a third fragment.
-        stop_mask = stop_mask * ((t >= self.min_len) + (add_node_mask.sum() == 0).float())
+        stop_mask = stop_mask * ((t >= self.min_len) + (add_node_mask.sum() == 0).float()).clamp(max=1)
 
         return gd.Data(
             x,
