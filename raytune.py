@@ -180,7 +180,7 @@ def exploration_config(exploration_strategy):
 
     elif exploration_strategy == "temp_fixed":
         return {
-            "algo.sample_temp": tune.choice([0.5, 0.9, 1, 1.1, 1.5, 2]),
+            "algo.sample_temp": tune.choice([0.5, 0.9, 1.1, 1.5, 2]),
             # "cond.temperature.dist_params": tune.choice([96, 48, 32, 16, 8]), #TODO: any other values to try?
             # "cond.temperature.num_thermometer_dim": 1,
         }
@@ -198,7 +198,7 @@ def exploration_config(exploration_strategy):
         return {
             "algo.train_random_action_prob": tune.choice([0.01, 0.05, 0.1]),
             "algo.valid_random_action_prob": 0,
-            "algo.sample_temp": tune.choice([0.9, 1, 1.1]),
+            "algo.sample_temp": tune.choice([0.9, 1, 1.1, 1.2]),
         }
     else:
         raise ValueError(f"Exploration strategy {exploration_strategy} not supported")
@@ -298,7 +298,7 @@ if __name__ == "__main__":
             "adam_eps": 1e-8,
         },
         "replay": {
-            "use": True,
+            "use": False,
             "capacity": 1000,
             "warmup": 1,
             "hindsight_ratio": 0.0,
@@ -321,8 +321,9 @@ if __name__ == "__main__":
         "cond": {
             "temperature": {
                 "sample_dist": "constant",  # "uniform"
-                "dist_params": [16.0],  # [0, 64.0],  #[16,32,64,96,128]
+                "dist_params": [48.0],  # [0, 64.0],  #[16,32,64,96,128]
                 "num_thermometer_dim": 1,
+                "val_temp": 48.0,
             }
         },
         "task": {"name": "seh_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
