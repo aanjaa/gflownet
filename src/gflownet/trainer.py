@@ -413,6 +413,9 @@ class GFNTrainer:
                 self.log(end_metrics, it)
             if ckpt_freq > 0 and it % ckpt_freq == 0:
                 self._save_state(it)
+
+            if self.cfg.algo.reset_schedule is not None and it + 1 in self.cfg.algo.reset_schedule:
+                self.model.reset_last_k_layers(self.cfg.algo.reset_num_layers)
         self._save_state(num_training_steps)
 
         num_final_gen_steps = self.cfg.num_final_gen_steps

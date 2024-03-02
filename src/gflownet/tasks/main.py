@@ -14,7 +14,7 @@ import torch
 import time
 
 
-def main(hps, use_wandb=False):
+def main(hps, use_wandb=False, entity="evaluating-gfns"):
     # hps must contain task.name, log_dir, overwrite_existing_exp
 
     # Measuring time
@@ -22,7 +22,7 @@ def main(hps, use_wandb=False):
 
     if use_wandb:
         wandb.init(
-            entity="evaluating-gfns", project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
+            entity=entity, project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
         )
 
     if os.path.exists(hps["log_dir"]):
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         "num_training_steps": 1000,  # 10_000,
         "print_every": 10,
         "validate_every": 100,
-        "num_workers": 8,
+        "num_workers": 0,
         "num_final_gen_steps": 2,
         "opt": {
             "lr_decay": 20_000,
@@ -90,6 +90,8 @@ if __name__ == "__main__":
                 "do_length_normalize": False,  ###TODO
                 "variant": TBVariant.TB,
             },
+            "reset_schedule": [100, 500, 1000, 2500],
+            "reset_num_layers": 5
         },
         "replay": {
             "use": True,
@@ -118,15 +120,15 @@ if __name__ == "__main__":
             #     "dist_params": [0, 64.0],
             #     }
             "temperature": {
-                "sample_dist": "discrete",  # "discrete", #"uniform" #"constant"
-                "dist_params": [1.0, 2.0, 32.0], 
+                "sample_dist": "constant",  # "discrete", #"uniform" #"constant"
+                "dist_params": [32.0], 
                 "num_thermometer_dim": 32,
                 "val_temp": 32.0,
             },
         },
         "task": {
-            "name": "tdc_frag",
-            "helper": "tdc_frag",
+            "name": "seh_frag",
+            "helper": "seh_frag",
             "tdc": {
                 "oracle": "qed",
             },
@@ -137,4 +139,4 @@ if __name__ == "__main__":
             "distance_thresh": 0.3,
         },
     }
-    info_val = main(hps, use_wandb=False)
+    info_val = main(hps, use_wandb=False, entity="mokshjain")
