@@ -232,7 +232,7 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives = ["FM", "DB", "SubTB1", "TB"]
-    tasks = ["seh_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    tasks = ["drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action"]
 
@@ -321,9 +321,9 @@ if __name__ == "__main__":
         "cond": {
             "temperature": {
                 "sample_dist": "constant",  # "uniform"
-                "dist_params": [48.0],  # [0, 64.0],  #[16,32,64,96,128]
+                "dist_params": [16.0],  # [0, 64.0],  #[16,32,64,96,128]
                 "num_thermometer_dim": 1,
-                "val_temp": 48.0,
+                "val_temp": 16.0,
             }
         },
         "task": {"name": "seh_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
