@@ -257,9 +257,13 @@ class GraphTransformerGFN(nn.Module):
 
     def reset_last_k_layers(self, k):
         """Reset the parameters of the last k layers of the model"""
-        self.trunk.reset_last_k_layers(k)
-        if self.do_separate_p_b:
-            self.bck_trunk.reset_last_k_layers(k)
+        for name, layer in self.named_children():
+            for n, l in layer.named_modules():
+                if hasattr(l, "reset_parameters"):
+                    l.reset_parameters()
+        # self.trunk.reset_last_k_layers(k)
+        # if self.do_separate_p_b:
+        #     self.bck_trunk.reset_last_k_layers(k)
 
     def _action_type_to_mask(self, t, g):
         return getattr(g, t.mask_name) if hasattr(g, t.mask_name) else torch.ones((1, 1), device=g.x.device)
