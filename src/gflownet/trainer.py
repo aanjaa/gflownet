@@ -1,4 +1,5 @@
 import os
+import random
 import pathlib
 from typing import Any, Callable, Dict, List, NewType, Optional, Tuple
 
@@ -34,6 +35,11 @@ FlatRewards = NewType("FlatRewards", Tensor)  # type: ignore
 # converting FlatRewards to a scalar, e.g. (sum R_i omega_i) ** beta
 RewardScalar = NewType("RewardScalar", Tensor)  # type: ignore
 
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2 ** 32 + worker_id
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 class GFNAlgorithm:
     def compute_batch_losses(
@@ -223,6 +229,8 @@ class GFNTrainer:
 
     def build_training_data_loader(self) -> DataLoader:
         model, dev = self._wrap_for_mp(self.sampling_model, send_to_device=True)
+        g = torch.Generator()
+        g.manual_seed(self.cfg.seed)
         replay_buffer, _ = self._wrap_for_mp(self.replay_buffer, send_to_device=False)
         iterator = SamplingIterator(
             self.training_data,
@@ -251,10 +259,14 @@ class GFNTrainer:
             # The 2 here is an odd quirk of torch 1.10, it is fixed and
             # replaced by None in torch 2.
             prefetch_factor=1 if self.cfg.num_workers else 2,
+            generator=g,
+            worker_init_fn=seed_worker
         )
 
     def build_validation_data_loader(self) -> DataLoader:
         model, dev = self._wrap_for_mp(self.model, send_to_device=True)
+        g = torch.Generator()
+        g.manual_seed(self.cfg.seed)
         iterator = SamplingIterator(
             self.test_data,
             model,
@@ -281,12 +293,16 @@ class GFNTrainer:
             num_workers=self.cfg.num_workers,
             persistent_workers=self.cfg.num_workers > 0,
             prefetch_factor=1 if self.cfg.num_workers else 2,
+            generator=g,
+            worker_init_fn=seed_worker
         )
 
     def build_final_data_loader(self) -> DataLoader:
         # Final data loader is now used to generate final trajectories for evaluation
         # it is different from validation data loader in that it does not take any test_data
         model, dev = self._wrap_for_mp(self.model, send_to_device=True)  # changed to model
+        g = torch.Generator()
+        g.manual_seed(self.cfg.seed)
         iterator = SamplingIterator(
             [],  # changed
             model,
@@ -315,6 +331,8 @@ class GFNTrainer:
             num_workers=self.cfg.num_workers,
             persistent_workers=self.cfg.num_workers > 0,
             prefetch_factor=1 if self.cfg.num_workers else 2,
+            generator=g,
+            worker_init_fn=seed_worker
         )
 
     def train_batch(self, batch: gd.Batch, epoch_idx: int, batch_idx: int, train_it: int) -> Dict[str, Any]:

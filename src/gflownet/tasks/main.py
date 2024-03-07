@@ -1,7 +1,5 @@
 import os
 import shutil
-import socket
-from typing import Callable, Dict, List, Tuple, Union
 import wandb
 
 import numpy as np
@@ -19,13 +17,16 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    torch.cuda.manual_seed_all(seed)
+
 
 def main(hps, use_wandb=False, entity="evaluating-gfns"):
     # hps must contain task.name, log_dir, overwrite_existing_exp
     # Measuring time
+    seed_everything(hps["seed"])
     start_time = time.time()
 
     if use_wandb:
@@ -41,7 +42,6 @@ def main(hps, use_wandb=False, entity="evaluating-gfns"):
     os.makedirs(hps["log_dir"])
 
     Trainer = get_Trainer(hps)
-    seed_everything(hps["seed"])
     print("Seed: ", hps["seed"])
     trial = Trainer(hps)
     info_final = trial.run()
@@ -92,20 +92,20 @@ if __name__ == "__main__":
     # sched2: [2000, 4000, 6000]
 
     hps = {
-        "log_dir": f"./logs/debug2",
+        "log_dir": f"./logs/test_no_buffer_lagging_{args.seed}",
         "device": "cuda",
         "seed": args.seed,  # TODO: how is seed handled?
         "validate_every": 1000,  # 1000,
-        "print_every": 1,
-        "num_training_steps": 10_000,
-        "num_workers": 0,
+        "print_every": 10,
+        "num_training_steps": 15650,
+        "num_workers": 8,
         "num_final_gen_steps": 320,
         "overwrite_existing_exp": True,
         "exploration_helper": "no_exploration",
         "algo": {
             "method": "TB",
             "helper": "TB",
-            "sampling_tau": 0,
+            "sampling_tau": 0.99,
             "sample_temp": 1.0,
             "online_batch_size": 64,
             "replay_batch_size": 32,
@@ -144,12 +144,12 @@ if __name__ == "__main__":
         "replay": {
             "use": False,
             "capacity": 1000,
-            "warmup": 1,
+            "warmup": 100,
             "hindsight_ratio": 0.0,
             "insertion": {
                 "strategy": "fifo",
-                "sim_thresh": 0.7,
-                "reward_thresh": 0.9,
+                "sim_thresh": 0.6,
+                "reward_thresh": 0.8,
             },
             "sampling": {
                 "strategy": "uniform",

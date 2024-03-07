@@ -261,7 +261,7 @@ if __name__ == "__main__":
         "algo": {
             "method": "TB",
             "helper": "TB",
-            "sampling_tau": 0.9,
+            "sampling_tau": 0.99,
             "sample_temp": 1.0,
             "online_batch_size": 64,
             "replay_batch_size": 32,
@@ -300,12 +300,12 @@ if __name__ == "__main__":
         "replay": {
             "use": False,
             "capacity": 1000,
-            "warmup": 1,
+            "warmup": 100,
             "hindsight_ratio": 0.0,
             "insertion": {
-                "strategy": "fifo",  # "diversity_and_reward_fast",
-                "sim_thresh": 0.7,
-                "reward_thresh": 0.9,
+                "strategy": "fifo",
+                "sim_thresh": 0.6,
+                "reward_thresh": 0.8,
             },
             "sampling": {
                 "strategy": "uniform",
@@ -321,16 +321,16 @@ if __name__ == "__main__":
         "cond": {
             "temperature": {
                 "sample_dist": "constant",  # "uniform"
-                "dist_params": [16.0],  # [0, 64.0],  #[16,32,64,96,128]
+                "dist_params": [32.0],  # [0, 64.0],  #[16,32,64,96,128]
                 "num_thermometer_dim": 1,
-                "val_temp": 16.0,
+                "val_temp": 32.0,
             }
         },
         "task": {"name": "seh_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
         "evaluation": {
             "k": 100,
-            "reward_thresh": 0.8,
-            "distance_thresh": 0.3,
+            "reward_thresh": 1,
+            "distance_thresh": 0.4,
         },
     }
 
@@ -344,6 +344,7 @@ if __name__ == "__main__":
         "opt.learning_rate": learning_rate,
         "algo.tb.Z_learning_rate": Z_learning_rate,
         "algo.tb.Z_lr_decay": Z_lr_decay,
+        "seed": tune.grid_search([42, 1010, 1335]),
     }
 
     search_spaces = []
