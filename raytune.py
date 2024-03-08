@@ -232,7 +232,7 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives = ["FM", "DB", "SubTB1", "TB"]
-    tasks = ["drd2_frag"]  #'sa_frag' gsk3_frag'
+    tasks = ["seh_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action"]
 
