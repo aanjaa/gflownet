@@ -303,7 +303,7 @@ if __name__ == "__main__":
             "warmup": 100,
             "hindsight_ratio": 0.0,
             "insertion": {
-                "strategy": "fifo",
+                "strategy": "diversity_and_reward",
                 "sim_thresh": 0.6,
                 "reward_thresh": 0.8,
             },
@@ -335,15 +335,15 @@ if __name__ == "__main__":
     }
 
     learning_rate = tune.choice([3e-4, 1e-4, 3e-5, 1e-5])
-    lr_decay = tune.choice([20_000, 10_000, 1_000])
+    # lr_decay = tune.choice([20_000, 10_000, 1_000])
     Z_learning_rate = tune.choice([3e-2, 1e-2, 3e-3, 1e-3, 3e-4, 1e-4])
-    Z_lr_decay = tune.choice([100_000, 50_000, 20_000, 1_000])
+    # Z_lr_decay = tune.choice([100_000, 50_000, 20_000, 1_000])
 
     shared_search_space = {
-        "opt.lr_decay": lr_decay,
+        # "opt.lr_decay": lr_decay,
         "opt.learning_rate": learning_rate,
         "algo.tb.Z_learning_rate": Z_learning_rate,
-        "algo.tb.Z_lr_decay": Z_lr_decay,
+        # "algo.tb.Z_lr_decay": Z_lr_decay,
         "seed": tune.grid_search([42, 1010, 1335]),
     }
 

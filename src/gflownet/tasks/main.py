@@ -3,9 +3,8 @@ import shutil
 import wandb
 
 import numpy as np
-from gflownet.utils.misc import prepend_keys
+from omegaconf import OmegaConf
 
-from gflownet.config import Config
 from gflownet.online_trainer import StandardOnlineTrainer
 from gflownet.algo.config import TBVariant
 import torch
@@ -72,29 +71,10 @@ def get_Trainer(hps) -> StandardOnlineTrainer:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--log_dir", type=str, default=f"./logs/mol_eval")
-    parser.add_argument("--use_resets", type=bool, default=False)
-    parser.add_argument("--use_wandb", type=bool, default=False)
-    parser.add_argument("--use_buffer", type=bool, default=False)
-    parser.add_argument("--sampling_tau", type=float, default=0)
-    parser.add_argument("--seed", type=int, default=0)
-
-    args = parser.parse_args()
-    # seed_everything(args.seed)
-    reset_schedule = None
-    reset_num_layers = 1
-    if args.use_resets:
-        reset_schedule = [1000, 2000, 3000, 4000, 5000, 6000]
-        reset_num_layers = 2
-    # [500, 1000, 1500, 3000, 5000]
-    # sched: [1000, 2000, 3000, 4000, 5000, 6000]
-    # sched2: [2000, 4000, 6000]
-
     hps = {
-        "log_dir": f"./logs/test_no_buffer_lagging_{args.seed}",
+        "log_dir": f"./logs/test_no_buffer_lagging_0",
         "device": "cuda",
-        "seed": args.seed,  # TODO: how is seed handled?
+        "seed": 0,  # TODO: how is seed handled?
         "validate_every": 1000,  # 1000,
         "print_every": 10,
         "num_training_steps": 15650,
@@ -177,4 +157,18 @@ if __name__ == "__main__":
             "distance_thresh": 0.4,
         },
     }
-    info_val = main(hps, use_wandb=args.use_wandb, entity="mokshjain")
+
+    conf = OmegaConf.create(hps)
+    cli_conf = OmegaConf.from_cli()
+    merged = OmegaConf.merge(conf, cli_conf)
+    hps = OmegaConf.to_container(merged, resolve=True)
+    if "use_wandb" in hps:
+        use_wandb = hps["use_wandb"]
+        del hps["use_wandb"]
+    else:
+        use_wandb = False
+    if "exp_name" in hps:
+        hps["log_dir"] = f"./logs/{hps['exp_name']}_{hps['seed']}"
+        del hps["exp_name"]
+
+    info_val = main(hps, use_wandb=use_wandb, entity="mokshjain")
