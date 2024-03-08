@@ -298,7 +298,7 @@ if __name__ == "__main__":
             "adam_eps": 1e-8,
         },
         "replay": {
-            "use": False,
+            "use": True,
             "capacity": 1000,
             "warmup": 100,
             "hindsight_ratio": 0.0,
