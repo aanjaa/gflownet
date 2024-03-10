@@ -304,7 +304,7 @@ if __name__ == "__main__":
             "hindsight_ratio": 0.0,
             "insertion": {
                 "strategy": "diversity_and_reward",
-                "sim_thresh": 0.6,
+                "sim_thresh": 0.7,
                 "reward_thresh": 0.8,
             },
             "sampling": {
@@ -330,7 +330,7 @@ if __name__ == "__main__":
         "evaluation": {
             "k": 100,
             "reward_thresh": 1,
-            "distance_thresh": 0.4,
+            "distance_thresh": 0.3,
         },
     }
 
