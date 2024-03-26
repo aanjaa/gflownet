@@ -47,6 +47,8 @@ class ReplayBuffer(object):
         self.beta = cfg.replay.sampling.quantile.beta
         self.reward_power = cfg.replay.sampling.weighted.reward_power
 
+    def get_warmup(self):
+        return self.warmup
 
     def push(self, *args):
         traj = Trajectory(args)

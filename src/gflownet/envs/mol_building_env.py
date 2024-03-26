@@ -12,7 +12,14 @@ from gflownet.envs.graph_building_env import Graph, GraphAction, GraphActionType
 from gflownet.utils.graphs import random_walk_probs
 
 DEFAULT_CHIRAL_TYPES = [ChiralType.CHI_UNSPECIFIED, ChiralType.CHI_TETRAHEDRAL_CW, ChiralType.CHI_TETRAHEDRAL_CCW]
+try:
+    from gflownet._C import mol_graph_to_Data, Graph as C_Graph, GraphDef, Data_collate
 
+    C_Graph_available = True
+except ImportError:
+    import warnings
+    warnings.warn("Could not import mol_graph_to_Data, Graph, GraphDef from _C, using pure python implementation")
+    C_Graph_available = False
 
 class MolBuildingEnvContext(GraphBuildingEnvContext):
     """A specification of what is being generated for a GraphBuildingEnv
@@ -62,12 +69,12 @@ class MolBuildingEnvContext(GraphBuildingEnvContext):
         """
         # idx 0 has to coincide with the default value
         self.atom_attr_values = {
-            "v": atoms + ["*"],
+            "v": atoms, # + ["*"],
             "chi": chiral_types,
             "charge": charges,
             "expl_H": expl_H_range,
             "no_impl": [False, True],
-            "fill_wildcard": [None] + atoms,  # default is, there is nothing
+            # "fill_wildcard": [None] + atoms,  # default is, there is nothing
         }
         self.num_rw_feat = num_rw_feat
         self.max_nodes = max_nodes
@@ -160,6 +167,14 @@ class MolBuildingEnvContext(GraphBuildingEnvContext):
             GraphActionType.RemoveEdgeAttr,
         ]
         self.device = torch.device("cpu")
+        if C_Graph_available:
+            self.graph_def = GraphDef(self.atom_attr_values, self.bond_attr_values)
+            self.graph_cls = self._make_C_graph
+        else:
+            self.graph_cls = Graph
+
+    def _make_C_graph(self):
+        return C_Graph(self.graph_def)
 
     def aidx_to_GraphAction(self, g: gd.Data, action_idx: Tuple[int, int, int], fwd: bool = True):
         """Translate an action index (e.g. from a GraphActionCategorical) to a GraphAction"""
@@ -168,6 +183,10 @@ class MolBuildingEnvContext(GraphBuildingEnvContext):
             t = self.action_type_order[act_type]
         else:
             t = self.bck_action_type_order[act_type]
+
+        if self.graph_cls is not Graph:
+            return g.mol_aidx_to_GraphAction((act_type, act_row, act_col), t)
+
         if t is GraphActionType.Stop:
             return GraphAction(t)
         elif t is GraphActionType.AddNode:
@@ -206,6 +225,9 @@ class MolBuildingEnvContext(GraphBuildingEnvContext):
                 break
         else:
             raise ValueError(f"Unknown action type {action.action}")
+
+        if self.graph_cls is not Graph:
+            return (type_idx,) + g.mol_GraphAction_to_aidx(action)
 
         if action.action is GraphActionType.Stop:
             row = col = 0
@@ -257,8 +279,11 @@ class MolBuildingEnvContext(GraphBuildingEnvContext):
             raise ValueError(f"Unknown action type {action.action}")
         return (type_idx, int(row), int(col))
 
-    def graph_to_Data(self, g: Graph, t: int = 0) -> gd.Data:
+    def graph_to_Data(self, g: Graph, t: int = 0, cond_info=None) -> gd.Data:
         """Convert a networkx Graph to a torch geometric Data instance"""
+        if self.graph_cls is not Graph:
+            return mol_graph_to_Data(g, self, torch, cond_info)
+
         x = np.zeros((max(1, len(g.nodes)), self.num_node_dim - self.num_rw_feat))
         x[0, -1] = len(g.nodes) == 0
         add_node_mask = np.ones((x.shape[0], self.num_new_node_values))
@@ -394,6 +419,8 @@ class MolBuildingEnvContext(GraphBuildingEnvContext):
 
     def collate(self, graphs: List[gd.Data]):
         """Batch Data instances"""
+        if self.graph_cls is not Graph:
+            return Data_collate(graphs, ["edge_index", "non_edge_index"])
         return gd.Batch.from_data_list(graphs, follow_batch=["edge_index", "non_edge_index"])
 
     def mol_to_graph(self, mol: Mol) -> Graph:

@@ -279,7 +279,7 @@ class SamplingIterator(IterableDataset):
                 # and sample replay_batch_size of them to add to the batch
 
                 # cond_info is a dict, so we need to convert it to a list of dicts
-                cond_info = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
+                cond_info_ = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
 
                 # push the online trajectories in the replay buffer and sample a new 'online' batch
                 for i in range(num_offline, len(trajs)):
@@ -287,9 +287,11 @@ class SamplingIterator(IterableDataset):
                         deepcopy(trajs[i]),
                         deepcopy(log_rewards[i]),
                         deepcopy(flat_rewards[i]),
-                        deepcopy(cond_info[i]),
+                        deepcopy(cond_info_[i]),
                         deepcopy(is_valid[i]),
                     )
+            if self.replay_buffer is not None and len(self.replay_buffer) > self.replay_buffer.get_warmup():
+                cond_info = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
                 replay_trajs, replay_logr, replay_fr, replay_condinfo, replay_valid = self.replay_buffer.sample(
                     self.replay_batch_size
                 )
