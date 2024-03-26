@@ -213,6 +213,7 @@ class GFNTrainer:
                 self.cfg.num_workers,
                 cast_types=(gd.Batch, GraphActionCategorical, SeqBatch),
                 pickle_messages=self.cfg.pickle_mp_messages,
+                sb_size=self.cfg.mp_buffer_size,
             )
             return placeholder, torch.device("cpu")
         else:

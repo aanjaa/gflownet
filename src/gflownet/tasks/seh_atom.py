@@ -25,6 +25,7 @@ class SEHAtomTrainer(StandardOnlineTrainer):
     def set_default_hps(self, cfg: Config):
         cfg.hostname = socket.gethostname()
         cfg.pickle_mp_messages = False
+        cfg.mp_buffer_size = 64 * 1024 ** 2  # 64MB
         cfg.num_workers = 5
 
         cfg.opt.learning_rate = 1e-4
@@ -32,7 +33,7 @@ class SEHAtomTrainer(StandardOnlineTrainer):
         cfg.opt.momentum = 0.9
         cfg.opt.adam_eps = 1e-8
         cfg.opt.lr_decay = 20_000
-        cfg.opt.clip_grad_type = "norm"
+        cfg.opt.clip_grad_type = "total_norm"
         cfg.opt.clip_grad_param = 10
 
         #cfg.algo.global_batch_size = 64
@@ -40,7 +41,7 @@ class SEHAtomTrainer(StandardOnlineTrainer):
         cfg.algo.method = "TB"
         cfg.algo.max_nodes = 50
         cfg.algo.sampling_tau = 0.95
-        cfg.algo.illegal_action_logreward = -256
+        cfg.algo.illegal_action_logreward = -512
         cfg.algo.train_random_action_prob = 0.0
         cfg.algo.train_random_traj_prob = 0.0
         cfg.algo.valid_random_action_prob = 0.0
@@ -51,9 +52,9 @@ class SEHAtomTrainer(StandardOnlineTrainer):
         cfg.algo.tb.Z_lr_decay = 50_000
         cfg.algo.tb.do_parameterize_p_b = True
 
-        cfg.model.num_emb = 128
-        cfg.model.num_layers = 4
-        cfg.model.graph_transformer.num_mlp_layers = 2
+        cfg.model.num_emb = 96
+        cfg.model.num_layers = 3
+        cfg.model.graph_transformer.num_mlp_layers = 1
 
         cfg.replay.use = False
         cfg.replay.capacity = 10_000
@@ -90,7 +91,7 @@ class SEHAtomTrainer(StandardOnlineTrainer):
 
 def main():
     hps = {
-        "log_dir": "./logs/debug_run_seh_atom",
+        "log_dir": "./logs/debug_run_seh_atom_2",
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "overwrite_existing_exp": True,
         "num_training_steps": 10_000,

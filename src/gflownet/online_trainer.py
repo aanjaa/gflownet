@@ -76,8 +76,9 @@ class StandardOnlineTrainer(GFNTrainer):
 
         self.mb_size = 64  # self.cfg.algo.global_batch_size
         self.clip_grad_callback = {
-            "value": lambda params: torch.nn.utils.clip_grad_value_(params, self.cfg.opt.clip_grad_param),
-            "norm": lambda params: torch.nn.utils.clip_grad_norm_(params, self.cfg.opt.clip_grad_param),
+            "value": lambda params: [torch.nn.utils.clip_grad_value_(i, self.cfg.opt.clip_grad_param) for i in params],
+            "norm": lambda params: [torch.nn.utils.clip_grad_norm_(i, self.cfg.opt.clip_grad_param) for i in params],
+            "total_norm": lambda params: torch.nn.utils.clip_grad_norm_(params, self.cfg.opt.clip_grad_param),
             "none": lambda x: None,
         }[self.cfg.opt.clip_grad_type]
 
@@ -94,8 +95,7 @@ class StandardOnlineTrainer(GFNTrainer):
 
     def step(self, loss: Tensor):
         loss.backward()
-        for i in self.model.parameters():
-            self.clip_grad_callback(i)
+        self.clip_grad_callback(self.model.parameters())
         self.opt.step()
         self.opt.zero_grad()
         self.opt_Z.step()
