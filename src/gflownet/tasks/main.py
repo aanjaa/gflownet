@@ -60,6 +60,9 @@ def get_Trainer(hps) -> StandardOnlineTrainer:
     if hps["task"]["name"] == "seh_frag":
         from gflownet.tasks.seh_frag import SEHFragTrainer
         return SEHFragTrainer
+    elif hps["task"]["name"] == "seh_plus_frag":
+        from gflownet.tasks.seh_plus_frag import SEHPlusFragTrainer
+        return SEHPlusFragTrainer
     elif hps["task"]["name"] in ["tdc_frag"]:
         from gflownet.tasks.tdc_frag import TDCFragTrainer
         return TDCFragTrainer
@@ -122,12 +125,12 @@ if __name__ == "__main__":
             "adam_eps": 1e-8,
         },
         "replay": {
-            "use": False,
+            "use": True,
             "capacity": 1000,
             "warmup": 100,
             "hindsight_ratio": 0.0,
             "insertion": {
-                "strategy": "fifo",
+                "strategy": "diversity_and_reward",
                 "sim_thresh": 0.7,
                 "reward_thresh": 0.8,
             },
@@ -150,10 +153,10 @@ if __name__ == "__main__":
                 "val_temp": 32.0,
             }
         },
-        "task": {"name": "seh_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
+        "task": {"name": "seh_plus_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
         "evaluation": {
             "k": 100,
-            "reward_thresh": 1,
+            "reward_thresh": 0.75,
             "distance_thresh": 0.3,
         },
     }

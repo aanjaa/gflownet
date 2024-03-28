@@ -152,6 +152,27 @@ class GraphSampler:
                         if self.consider_masks_complete:
                             # If masks are considered complete, then we can safely say that we've encountered a bug
                             # since the agent should only be able to take legal actions (that would not raise an error)
+                            dump = {
+                                'env': self.env,
+                                'i': i,
+                                'j': j,
+                                'graph': graphs,
+                                'action': graph_actions,
+                                'step': t,
+                                'done': done,
+                                'fwd_logprob': fwd_logprob,
+                                'bck_logprob': bck_logprob,
+                                'bck_a': bck_a,
+                                'model': model,
+                                'cond_info': cond_info,
+                                'self': self,
+                                'fwd_cat': fwd_cat,
+                                'torch_graphs': torch_graphs,
+                            }
+                            import pickle
+                            import gzip
+                            with gzip.open('crash_dump.pkl.gz', 'wb') as f:
+                                pickle.dump(dump, f)
                             raise e
                         done[i] = True
                         data[i]["is_valid"] = False

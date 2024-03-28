@@ -11,6 +11,7 @@ import multiprocessing
 from argparse import ArgumentParser
 import time
 import torch
+import numpy as np
 import ray
 from gflownet.utils.misc import replace_dict_key, change_config, get_num_cpus
 from gflownet.algo.config import TBVariant
@@ -20,8 +21,8 @@ from ray.tune.schedulers import ASHAScheduler
 from gflownet.tasks.main import main
 
 
-def run_raytune(search_space):
-    if os.path.exists(search_space["log_dir"]):
+def run_raytune(search_space, ray_dir):
+    if os.path.exists(ray_dir):
         if search_space["overwrite_existing_exp"]:
             shutil.rmtree(search_space["log_dir"])
         else:
@@ -29,10 +30,10 @@ def run_raytune(search_space):
                 f"Log dir {search_space['log_dir']} already exists. Set overwrite_existing_exp=True to delete it."
             )
 
-    os.makedirs(search_space["log_dir"])
+    os.makedirs(ray_dir)
 
     # Save the search space
-    with open(os.path.join(search_space["log_dir"] + "/" + time.strftime("%d.%m_%H:%M:%S") + ".json"), "w") as fp:
+    with open(os.path.join(ray_dir + "/" + time.strftime("%d.%m_%H:%M:%S") + ".json"), "w") as fp:
         json.dump(
             search_space,
             fp,
@@ -43,7 +44,7 @@ def run_raytune(search_space):
         )
 
     # Save the search space by saving this file itself
-    shutil.copy(__file__, os.path.join(search_space["log_dir"] + "/ray.py"))
+    shutil.copy(__file__, os.path.join(ray_dir + "/ray.py"))
 
     # asha_scheduler = ASHAScheduler(
     # time_attr='training_iteration',
@@ -54,9 +55,9 @@ def run_raytune(search_space):
     # reduction_factor=3,
     # brackets=1,
     # )
-
+    np.random.seed(1212)
     tuner = tune.Tuner(
-        tune.with_resources(functools.partial(main, use_wandb=True), resources=group_factory),
+        tune.with_resources(functools.partial(main, use_wandb=False), resources=group_factory),
         # functools.partial(main,use_wandb=True),
         param_space=search_space,
         tune_config=tune.TuneConfig(
@@ -68,7 +69,7 @@ def run_raytune(search_space):
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
             # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
         ),
-        run_config=air.RunConfig(name="details", verbose=2, local_dir=search_space["log_dir"], log_to_file=False),
+        run_config=air.RunConfig(name="details", verbose=2, local_dir=ray_dir, log_to_file=False),
     )
 
     # Start timing
@@ -82,7 +83,7 @@ def run_raytune(search_space):
 
     # Get a DataFrame with the results and save it to a CSV file
     df = results.get_dataframe()
-    df.to_csv(os.path.join(search_space["log_dir"] + "/" + "dataframe.csv"), index=False)
+    df.to_csv(os.path.join(ray_dir + "/" + "dataframe.csv"), index=False)
 
     # Generate txt files
     if results.errors:
@@ -91,10 +92,10 @@ def run_raytune(search_space):
     else:
         print("No errors!")
     if results.errors:
-        with open(os.path.join(search_space["log_dir"], "error.txt"), "w") as file:
+        with open(os.path.join(ray_dir, "error.txt"), "w") as file:
             file.write(f"Experiment failed for with errors {results.errors}")
 
-    with open(os.path.join(search_space["log_dir"] + "/summary.txt"), "w") as file:
+    with open(os.path.join(ray_dir + "/summary.txt"), "w") as file:
         for i, result in enumerate(results):
             if result.error:
                 file.write(f"Trial #{i} had an error: {result.error} \n")
@@ -103,7 +104,7 @@ def run_raytune(search_space):
             file.write(f"Trial #{i} finished successfully with a {metric} metric of: {result.metrics[metric]} \n")
 
     config = results.get_best_result().config
-    with open(os.path.join(search_space["log_dir"] + "/best_config.json"), "w") as file:
+    with open(os.path.join(ray_dir + "/best_config.json"), "w") as file:
         json.dump(
             config,
             file,
@@ -141,7 +142,9 @@ def task_config(task):
     if task == "seh_frag":
         task_name = "seh_frag"
         oracle = "qed"
-
+    elif task == "seh_plus_frag":
+        task_name = "seh_plus_frag"
+        oracle = "qed"
     elif task == "qed_frag":
         task_name = "tdc_frag"
         oracle = "qed"
@@ -163,7 +166,7 @@ def task_config(task):
 
 
 def log_dir_config(name):
-    return {"log_dir": f"./logs/{args.prepend_name}{args.experiment_name}/{name}"}
+    return {"log_dir": f"./logs/"}
 
 
 def exploration_config(exploration_strategy):
@@ -207,12 +210,13 @@ def exploration_config(exploration_strategy):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--experiment_name", type=str, default="training_objectives")
+    parser.add_argument("--ray_dir_base", type=str, default="./logs/")
     parser.add_argument("--idx", type=int, default=0, help="Run number in an experiment")
     parser.add_argument("--prepend_name", type=str, default="debug_")
     parser.add_argument("--num_gpus", type=int, default=1)
     parser.add_argument("--num_cpus", type=int, default=4)
     parser.add_argument("--num_samples", type=int, default=1)
-    parser.add_argument("--placement_cpu", type=float, default=1.0)
+    parser.add_argument("--placement_cpu", type=int, default=1.0)
     parser.add_argument("--placement_gpu", type=float, default=1.0)
     args = parser.parse_args()
 
@@ -220,7 +224,7 @@ if __name__ == "__main__":
     group_factory = tune.PlacementGroupFactory(
         [{"CPU": args.placement_cpu, "GPU": args.placement_gpu}]
     )
-    num_workers = 4
+    num_workers = args.placement_cpu
 
     num_training_steps = 15650 #1000 # 15_650 #10_000
     validate_every = 1000  #100 # 1000 #1000
@@ -232,7 +236,7 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives = ["FM", "DB", "SubTB1", "TB"]
-    tasks = ["seh_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    tasks = ["seh_plus_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action"]
 
@@ -329,7 +333,7 @@ if __name__ == "__main__":
         "task": {"name": "seh_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
         "evaluation": {
             "k": 100,
-            "reward_thresh": 1,
+            "reward_thresh": 0.75,
             "distance_thresh": 0.3,
         },
     }
@@ -348,7 +352,7 @@ if __name__ == "__main__":
     }
 
     search_spaces = []
-
+    names = []
     if args.experiment_name == "training_objectives":
         for task in tasks: 
             for training_objective in training_objectives:
@@ -359,6 +363,7 @@ if __name__ == "__main__":
                     **method_config(training_objective),
                     **shared_search_space,
                 }
+                names.append(name)
                 search_spaces.append(change_config(copy.deepcopy(config), changes_config))
 
     elif args.experiment_name == "buffer":
@@ -376,6 +381,7 @@ if __name__ == "__main__":
                             "replay.insertion.strategy": insertion,
                             "replay.sampling.strategy": sampling,
                         }
+                        names.append(name)
                         search_spaces.append(change_config(copy.deepcopy(config), changes_config))
 
             # No buffer control
@@ -386,6 +392,7 @@ if __name__ == "__main__":
                 **shared_search_space,
                 "replay.use": False,
             }
+            names.append(name)
             search_spaces.append(change_config(copy.deepcopy(config), changes_config))
 
     elif args.experiment_name == "exploration":
@@ -399,9 +406,11 @@ if __name__ == "__main__":
                     **exploration_config(exploration_strategy),
                     "exploration_helper": exploration_strategy,
                 }
+                names.append(name)
                 search_spaces.append(change_config(copy.deepcopy(config), changes_config))
-
+    ray_dir = os.path.join(args.ray_dir_base, f"{args.prepend_name}{args.experiment_name}/{names[args.idx]}")
     print(
-        f"Running run number {args.idx} out of {len(search_spaces)} with log_dir {search_spaces[args.idx]['log_dir']}"
+        f"Running run number {args.idx} out of {len(search_spaces)} with log_dir {ray_dir}"
     )
-    run_raytune(search_spaces[args.idx])
+    
+    run_raytune(search_spaces[args.idx], ray_dir)
