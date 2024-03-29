@@ -57,7 +57,7 @@ def run_raytune(search_space, ray_dir):
     # )
     np.random.seed(1212)
     tuner = tune.Tuner(
-        tune.with_resources(functools.partial(main, use_wandb=False), resources=group_factory),
+        tune.with_resources(functools.partial(main, use_wandb=True), resources=group_factory),
         # functools.partial(main,use_wandb=True),
         param_space=search_space,
         tune_config=tune.TuneConfig(
