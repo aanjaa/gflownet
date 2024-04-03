@@ -166,7 +166,11 @@ def task_config(task):
 
 
 def log_dir_config(name):
-    return {"log_dir": f"./logs/"}
+    return {
+        "log_dir": f"./logs/",
+        "exp_name": f"{name}",
+        "project": f"{args.prepend_name}{args.experiment_name}"
+    }
 
 
 def exploration_config(exploration_strategy):
@@ -253,6 +257,8 @@ if __name__ == "__main__":
 
     config = {
         "log_dir": f"./logs/debug_raytune",
+        "exp_name": "test",
+        "project": "test",
         "device": "cuda" if bool(args.num_gpus) else "cpu",
         "seed": 0,  # TODO: how is seed handled?
         "validate_every": validate_every,  # 1000,

@@ -146,6 +146,7 @@ class GraphSampler:
                     gp = graphs[i]
                     try:
                         # self.env.step can raise AssertionError if the action is illegal
+                        assert fwd_cat.log_prob(actions, logprobs=fwd_cat.masks).min() > 0
                         gp = self.env.step(graphs[i], graph_actions[j])
                         assert len(gp.nodes) <= self.max_nodes
                     except AssertionError as e:
@@ -157,20 +158,21 @@ class GraphSampler:
                                 'i': i,
                                 'j': j,
                                 'graph': graphs,
-                                'action': graph_actions,
+                                'actions': actions,
+                                'graph_actions': graph_actions,
                                 'step': t,
                                 'done': done,
                                 'fwd_logprob': fwd_logprob,
                                 'bck_logprob': bck_logprob,
                                 'bck_a': bck_a,
-                                'model': model,
                                 'cond_info': cond_info,
-                                'self': self,
+                                'data': data,
                                 'fwd_cat': fwd_cat,
                                 'torch_graphs': torch_graphs,
                             }
                             import pickle
                             import gzip
+                            torch.save(model.state_dict(), 'model.pth')
                             with gzip.open('crash_dump.pkl.gz', 'wb') as f:
                                 pickle.dump(dump, f)
                             raise e

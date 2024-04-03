@@ -30,8 +30,10 @@ def main(hps, use_wandb=False, entity="evaluating-gfns"):
 
     if use_wandb:
         wandb.init(
-            entity=entity, project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
+            entity=entity, project=hps["project"], name=hps["exp_name"], config=hps, sync_tensorboard=True
         )
+    del hps["exp_name"]
+    del hps["project"]
 
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
