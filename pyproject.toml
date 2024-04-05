@@ -53,14 +53,14 @@ name = "gflownet"
 readme = "README.md"
 classifiers = ["Operating System :: OS Independent", "Programming Language :: Python", "Programming Language :: Python :: 3"]
 keywords = ["gflownet"]
-requires-python = ">=3.8,<3.10"
+requires-python = ">=3.8,<3.11"
 dynamic = ["version"]
 dependencies = [
-    "torch==1.13.1",
-    "torch-geometric==2.3.1",
-    "torch-scatter==2.1.1",
-    "torch-sparse==0.6.17",
-    "torch-cluster==1.6.1",
+    "torch==2.1.2",
+    "torch-geometric==2.4.0",
+    "torch-scatter==2.1.2",
+    "torch-sparse==0.6.18",
+    "torch-cluster==1.6.3",
     "rdkit",
     "tables",
     "scipy",
