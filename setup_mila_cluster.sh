@@ -1,4 +1,4 @@
-module load miniconda/3 cudatoolkit/12.1
+module load miniconda/3 cudatoolkit/12.2
 conda create -p $SLURM_TMPDIR/env python=3.10 -y
 conda activate $SLURM_TMPDIR/env
 # only necessary for RNA task
