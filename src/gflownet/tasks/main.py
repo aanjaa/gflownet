@@ -79,6 +79,7 @@ if __name__ == "__main__":
     hps = {
         "log_dir": f"./logs/test_no_buffer_lagging_0",
         "device": "cuda",
+        "project": "gflownet_mol",
         "seed": 0,  # TODO: how is seed handled?
         "validate_every": 1000,  # 1000,
         "print_every": 10,
@@ -174,6 +175,6 @@ if __name__ == "__main__":
         use_wandb = False
     if "exp_name" in hps:
         hps["log_dir"] = f"./logs/{hps['exp_name']}_{hps['seed']}"
-        del hps["exp_name"]
+        # del hps["exp_name"]
 
     info_val = main(hps, use_wandb=use_wandb, entity="mokshjain")
