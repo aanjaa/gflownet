@@ -240,6 +240,7 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
+            replay_buffer_warmup=self.cfg.replay.warmup,
             online_batch_size=self.cfg.algo.online_batch_size,
             replay_batch_size=self.cfg.algo.replay_batch_size,
             offline_batch_size=self.cfg.algo.offline_batch_size,
@@ -276,6 +277,7 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
+            replay_buffer_warmup=self.cfg.replay.warmup,
             online_batch_size=self.cfg.algo.online_batch_size,
             replay_batch_size=0,
             offline_batch_size=self.cfg.algo.offline_batch_size,
@@ -314,6 +316,7 @@ class GFNTrainer:
             self.task,
             dev,
             online_batch_size=self.cfg.algo.online_batch_size,
+            replay_buffer_warmup=self.cfg.replay.warmup,
             replay_batch_size=0,
             offline_batch_size=0,
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
@@ -346,6 +349,12 @@ class GFNTrainer:
         elif isinstance(batch, (gd.Batch, SeqBatch)):
             batch = batch.to(self.device)
         return batch
+
+    def _maybe_reset_shared_buffers(self, dl: DataLoader):
+        if dl.dataset.mp_buffer_size:
+            for wid in range(dl.dataset.num_workers):
+                dl.dataset.result_buffer[wid].lock.acquire(block=False)
+                dl.dataset.result_buffer[wid].lock.release()
 
     def train_batch(self, batch: gd.Batch, epoch_idx: int, batch_idx: int, train_it: int) -> Dict[str, Any]:
         try:
@@ -417,9 +426,9 @@ class GFNTrainer:
                 candidates_eval_infos = []
                 # for batch in valid_dl:
                 # validate on at least 10 batches
-                for valid_it, batch in zip(range(10), cycle(valid_dl)):
+                self._maybe_reset_shared_buffers(valid_dl)
+                for valid_it, batch in zip(range(8), cycle(valid_dl)):
                     batch, candidates_eval_info = self._maybe_resolve_shared_buffer(batch, valid_dl)
-                    # print("valid_it", valid_it)
                     candidates_eval_infos.append(candidates_eval_info)
                     metrics = self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx)
                     overall_max = max(overall_max, metrics["flat_rewards_max"])

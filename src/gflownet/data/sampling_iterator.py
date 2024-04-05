@@ -36,6 +36,7 @@ class SamplingIterator(IterableDataset):
         online_batch_size: int = 1,
         offline_batch_size: int = 0,
         replay_batch_size: int = 0,
+        replay_buffer_warmup: int = 0,
         illegal_action_logreward: float = -50,
         stream: bool = True,
         replay_buffer: ReplayBuffer = None,
@@ -93,7 +94,7 @@ class SamplingIterator(IterableDataset):
         self.data = dataset
         self.model = model
         self.replay_buffer = replay_buffer
-
+        self.warmup = replay_buffer_warmup
         self.replay_batch_size = replay_batch_size
         self.offline_batch_size = offline_batch_size
         self.online_batch_size = online_batch_size
@@ -300,7 +301,8 @@ class SamplingIterator(IterableDataset):
                         deepcopy(cond_info_[i]),
                         deepcopy(is_valid[i]),
                     )
-            if self.replay_buffer is not None and len(self.replay_buffer) > self.replay_buffer.warmup:
+
+            if self.replay_buffer is not None and len(self.replay_buffer) > self.warmup:
                 cond_info = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
                 replay_trajs, replay_logr, replay_fr, replay_condinfo, replay_valid = self.replay_buffer.sample(
                     self.replay_batch_size

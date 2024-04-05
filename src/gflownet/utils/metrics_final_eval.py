@@ -38,7 +38,7 @@ def compute_metrics(gen_candidates_info_list, cand_type="mols", k=100, reward_th
         flat_rewards = []
         for batch in gen_candidates_info_list:
             smiles.extend(batch[0])
-            flat_rewards.extend(batch[1])
+            flat_rewards.extend(batch[1].cpu())
         assert len(smiles) == len(flat_rewards)
         candidates = [Chem.RDKFingerprint(Chem.MolFromSmiles(smi)) for smi in smiles]
         dist_fn = mol_dist
