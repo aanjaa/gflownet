@@ -18,4 +18,4 @@ pip install PyTDC levenshtein wandb
 pip install -U rliable
 # only necessary for RNA task
 # pip install flexs
-pip install ray==2.6.2
+pip install ray
