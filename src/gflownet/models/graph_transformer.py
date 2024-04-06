@@ -78,6 +78,20 @@ class GraphTransformer(nn.Module):
             )
         )
 
+    def reset_last_k_layers(self, k):
+        """Reset the parameters of the last k layers of the model"""
+        for name, layer in self.named_children():
+            for n, l in layer.named_modules():
+                print(n)
+                if hasattr(l, "reset_parameters"):
+                    l.reset_parameters()
+        # for i in range(self.num_layers - k, self.num_layers):
+        #     import pdb; pdb.set_trace();
+        #     for layer in self.graph2emb[i * 7 : (i + 1) * 7]:
+        #         if hasattr(layer, 'reset_parameters'):
+        #             print(f"Resetting {layer}")
+        #             layer.reset_parameters()
+
     def forward(self, g: gd.Batch, cond: torch.Tensor):
         """Forward pass
 
@@ -240,6 +254,16 @@ class GraphTransformerGFN(nn.Module):
             num_heads=cfg.model.graph_transformer.num_heads,
             ln_type=cfg.model.graph_transformer.ln_type,
         )
+
+    def reset_last_k_layers(self, k):
+        """Reset the parameters of the last k layers of the model"""
+        for name, layer in self.named_children():
+            for n, l in layer.named_modules():
+                if hasattr(l, "reset_parameters"):
+                    l.reset_parameters()
+        # self.trunk.reset_last_k_layers(k)
+        # if self.do_separate_p_b:
+        #     self.bck_trunk.reset_last_k_layers(k)
 
     def _action_type_to_mask(self, t, g):
         return getattr(g, t.mask_name) if hasattr(g, t.mask_name) else torch.ones((1, 1), device=g.x.device)

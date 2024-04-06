@@ -26,7 +26,7 @@ class MakeRingsTask(GFNTask):
     def flat_reward_transform(self, y: Union[float, Tensor]) -> FlatRewards:
         return FlatRewards(y)
 
-    def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, Tensor]:
+    def sample_conditional_information(self, n: int, train_it: int, is_validation: bool = False) -> Dict[str, Tensor]:
         return {"beta": torch.ones(n), "encoding": torch.ones(n, 1)}
 
     def cond_info_to_logreward(self, cond_info: Dict[str, Tensor], flat_reward: FlatRewards) -> RewardScalar:

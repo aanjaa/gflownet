@@ -1,4 +1,5 @@
 import os
+import random
 import pathlib
 from typing import Any, Callable, Dict, List, NewType, Optional, Tuple
 
@@ -18,7 +19,7 @@ from gflownet.data.sampling_iterator import SamplingIterator
 from gflownet.envs.graph_building_env import GraphActionCategorical, GraphBuildingEnv, GraphBuildingEnvContext
 from gflownet.envs.seq_building_env import SeqBatch
 from gflownet.utils.misc import create_logger
-from gflownet.utils.multiprocessing_proxy import mp_object_wrapper
+from gflownet.utils.multiprocessing_proxy import mp_object_wrapper, BufferUnpickler
 from gflownet.utils.misc import prepend_keys, average_values_across_dicts
 from gflownet.utils.metrics_final_eval import compute_metrics
 import wandb
@@ -34,6 +35,11 @@ FlatRewards = NewType("FlatRewards", Tensor)  # type: ignore
 # converting FlatRewards to a scalar, e.g. (sum R_i omega_i) ** beta
 RewardScalar = NewType("RewardScalar", Tensor)  # type: ignore
 
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2 ** 32 + worker_id
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 class GFNAlgorithm:
     def compute_batch_losses(
@@ -213,7 +219,8 @@ class GFNTrainer:
                 self.cfg.num_workers,
                 cast_types=(gd.Batch, GraphActionCategorical, SeqBatch),
                 pickle_messages=self.cfg.pickle_mp_messages,
-            )
+                sb_size=self.cfg.mp_buffer_size,
+            ).placeholder
             return placeholder, torch.device("cpu")
         else:
             return obj, self.device
@@ -223,6 +230,8 @@ class GFNTrainer:
 
     def build_training_data_loader(self) -> DataLoader:
         model, dev = self._wrap_for_mp(self.sampling_model, send_to_device=True)
+        g = torch.Generator()
+        g.manual_seed(self.cfg.seed)
         replay_buffer, _ = self._wrap_for_mp(self.replay_buffer, send_to_device=False)
         iterator = SamplingIterator(
             self.training_data,
@@ -231,6 +240,7 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
+            replay_buffer_warmup=self.cfg.replay.warmup,
             online_batch_size=self.cfg.algo.online_batch_size,
             replay_batch_size=self.cfg.algo.replay_batch_size,
             offline_batch_size=self.cfg.algo.offline_batch_size,
@@ -240,6 +250,7 @@ class GFNTrainer:
             random_action_prob=self.cfg.algo.train_random_action_prob,
             random_traj_prob=self.cfg.algo.train_random_traj_prob,
             hindsight_ratio=self.cfg.replay.hindsight_ratio,
+            mp_cfg=(self.cfg.num_workers, self.cfg.pickle_mp_messages, self.cfg.mp_buffer_size),
         )
         for hook in self.sampling_hooks:
             iterator.add_log_hook(hook)
@@ -250,11 +261,15 @@ class GFNTrainer:
             persistent_workers=self.cfg.num_workers > 0,
             # The 2 here is an odd quirk of torch 1.10, it is fixed and
             # replaced by None in torch 2.
-            prefetch_factor=1 if self.cfg.num_workers else 2,
+            prefetch_factor=1 if self.cfg.num_workers else (None if torch.__version__.startswith('2') else 2),
+            generator=g,
+            worker_init_fn=seed_worker
         )
 
     def build_validation_data_loader(self) -> DataLoader:
         model, dev = self._wrap_for_mp(self.model, send_to_device=True)
+        g = torch.Generator()
+        g.manual_seed(self.cfg.seed)
         iterator = SamplingIterator(
             self.test_data,
             model,
@@ -262,6 +277,7 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
+            replay_buffer_warmup=self.cfg.replay.warmup,
             online_batch_size=self.cfg.algo.online_batch_size,
             replay_batch_size=0,
             offline_batch_size=self.cfg.algo.offline_batch_size,
@@ -271,6 +287,8 @@ class GFNTrainer:
             sample_cond_info=self.cfg.algo.valid_sample_cond_info,
             stream=False,
             random_action_prob=self.cfg.algo.valid_random_action_prob,
+            is_validation=True,
+            mp_cfg=(self.cfg.num_workers, self.cfg.pickle_mp_messages, self.cfg.mp_buffer_size),
         )
         for hook in self.valid_sampling_hooks:
             iterator.add_log_hook(hook)
@@ -279,13 +297,17 @@ class GFNTrainer:
             batch_size=None,
             num_workers=self.cfg.num_workers,
             persistent_workers=self.cfg.num_workers > 0,
-            prefetch_factor=1 if self.cfg.num_workers else 2,
+            prefetch_factor=1 if self.cfg.num_workers else (None if torch.__version__.startswith('2') else 2),
+            generator=g,
+            worker_init_fn=seed_worker
         )
 
     def build_final_data_loader(self) -> DataLoader:
         # Final data loader is now used to generate final trajectories for evaluation
         # it is different from validation data loader in that it does not take any test_data
         model, dev = self._wrap_for_mp(self.model, send_to_device=True)  # changed to model
+        g = torch.Generator()
+        g.manual_seed(self.cfg.seed)
         iterator = SamplingIterator(
             [],  # changed
             model,
@@ -294,6 +316,7 @@ class GFNTrainer:
             self.task,
             dev,
             online_batch_size=self.cfg.algo.online_batch_size,
+            replay_buffer_warmup=self.cfg.replay.warmup,
             replay_batch_size=0,
             offline_batch_size=0,
             illegal_action_logreward=self.cfg.algo.illegal_action_logreward,
@@ -303,7 +326,9 @@ class GFNTrainer:
             stream=False,
             random_action_prob=self.cfg.algo.valid_random_action_prob,
             hindsight_ratio=0.0,
+            is_validation=True,
             # init_train_iter=self.cfg.num_training_steps,
+            mp_cfg=(self.cfg.num_workers, self.cfg.pickle_mp_messages, self.cfg.mp_buffer_size),
         )
         for hook in self.sampling_hooks:
             iterator.add_log_hook(hook)
@@ -312,8 +337,24 @@ class GFNTrainer:
             batch_size=None,
             num_workers=self.cfg.num_workers,
             persistent_workers=self.cfg.num_workers > 0,
-            prefetch_factor=1 if self.cfg.num_workers else 2,
+            prefetch_factor=1 if self.cfg.num_workers else (None if torch.__version__.startswith('2') else 2),
+            generator=g,
+            worker_init_fn=seed_worker
         )
+
+    def _maybe_resolve_shared_buffer(self, batch, dl: DataLoader):
+        if dl.dataset.mp_buffer_size and isinstance(batch, (tuple, list)):
+            batch, wid = batch
+            batch = BufferUnpickler(dl.dataset.result_buffer[wid], batch, self.device).load()
+        elif isinstance(batch, (gd.Batch, SeqBatch)):
+            batch = batch.to(self.device)
+        return batch
+
+    def _maybe_reset_shared_buffers(self, dl: DataLoader):
+        if dl.dataset.mp_buffer_size:
+            for wid in range(dl.dataset.num_workers):
+                dl.dataset.result_buffer[wid].lock.acquire(block=False)
+                dl.dataset.result_buffer[wid].lock.release()
 
     def train_batch(self, batch: gd.Batch, epoch_idx: int, batch_idx: int, train_it: int) -> Dict[str, Any]:
         try:
@@ -363,7 +404,8 @@ class GFNTrainer:
         start = self.cfg.start_at_step + 1
         num_training_steps = self.cfg.num_training_steps
         logger.info("Starting training")
-        for it, (batch, _) in zip(range(start, 1 + num_training_steps), cycle(train_dl)):
+        for it, batch in zip(range(start, 1 + num_training_steps), cycle(train_dl)):
+            batch, _ = self._maybe_resolve_shared_buffer(batch, train_dl)
             epoch_idx = it // epoch_length
             batch_idx = it % epoch_length
             if self.replay_buffer is not None and len(self.replay_buffer) < self.replay_buffer.warmup:
@@ -384,8 +426,9 @@ class GFNTrainer:
                 candidates_eval_infos = []
                 # for batch in valid_dl:
                 # validate on at least 10 batches
-                for valid_it, (batch, candidates_eval_info) in zip(range(10), cycle(valid_dl)):
-                    # print("valid_it", valid_it)
+                self._maybe_reset_shared_buffers(valid_dl)
+                for valid_it, batch in zip(range(8), cycle(valid_dl)):
+                    batch, candidates_eval_info = self._maybe_resolve_shared_buffer(batch, valid_dl)
                     candidates_eval_infos.append(candidates_eval_info)
                     metrics = self.evaluate_batch(batch.to(self.device), epoch_idx, batch_idx)
                     overall_max = max(overall_max, metrics["flat_rewards_max"])
@@ -411,16 +454,20 @@ class GFNTrainer:
                 self.log(end_metrics, it)
             if ckpt_freq > 0 and it % ckpt_freq == 0:
                 self._save_state(it)
+
+            if self.cfg.algo.reset_schedule is not None and it + 1 in self.cfg.algo.reset_schedule:
+                self.model.reset_last_k_layers(self.cfg.algo.reset_num_layers)
         self._save_state(num_training_steps)
 
         num_final_gen_steps = self.cfg.num_final_gen_steps
         if num_final_gen_steps:
             gen_candidates_list = []
             logger.info(f"Generating final {num_final_gen_steps} batches ...")
-            for it, (_, gen_candidates_eval_info) in zip(
+            for it, batch in zip(
                 range(num_training_steps, num_training_steps + num_final_gen_steps + 1),
                 cycle(final_dl),
             ):
+                _, gen_candidates_eval_info = self._maybe_resolve_shared_buffer(batch, final_dl)
                 gen_candidates_list.append(gen_candidates_eval_info)
 
             info_final_gen = compute_metrics(gen_candidates_list, cand_type=self.task.cand_type, k=self.cfg.evaluation.k, reward_thresh=self.cfg.evaluation.reward_thresh, distance_thresh=self.cfg.evaluation.distance_thresh)

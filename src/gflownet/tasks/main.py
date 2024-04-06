@@ -1,29 +1,39 @@
 import os
 import shutil
-import socket
-from typing import Callable, Dict, List, Tuple, Union
 import wandb
 
 import numpy as np
-from gflownet.utils.misc import prepend_keys
+from omegaconf import OmegaConf
 
-from gflownet.config import Config
 from gflownet.online_trainer import StandardOnlineTrainer
 from gflownet.algo.config import TBVariant
 import torch
 import time
+import random
+import argparse
+
+def seed_everything(seed):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.cuda.manual_seed_all(seed)
 
 
-def main(hps, use_wandb=False):
+def main(hps, use_wandb=False, entity="evaluating-gfns"):
     # hps must contain task.name, log_dir, overwrite_existing_exp
-
     # Measuring time
+    seed_everything(hps["seed"])
     start_time = time.time()
 
     if use_wandb:
         wandb.init(
-            project=hps["log_dir"].split("/")[-2], name=hps["log_dir"].split("/")[-1], config=hps, sync_tensorboard=True
+            entity=entity, project=hps["project"], name=hps["exp_name"], config=hps, sync_tensorboard=True
         )
+    del hps["exp_name"]
+    del hps["project"]
 
     if os.path.exists(hps["log_dir"]):
         if hps["overwrite_existing_exp"]:
@@ -33,11 +43,9 @@ def main(hps, use_wandb=False):
     os.makedirs(hps["log_dir"])
 
     Trainer = get_Trainer(hps)
+    print("Seed: ", hps["seed"])
     trial = Trainer(hps)
     info_final = trial.run()
-    # if trial.cfg.num_final_gen_steps > 0:
-    #     info_candidates = candidates_eval(final_gen_batches,path = trial.cfg.log_dir+"final", k=trial.cfg.evaluation.k, reward_thresh = trial.cfg.evaluation.reward_thresh, tanimoto_thresh=trial.cfg.evaluation.tanimoto_thresh)
-    #     info_final = {**info_final,**info_candidates}
 
     if use_wandb:
         # wandb.log(prepend_keys(info_final,"final"))
@@ -54,6 +62,9 @@ def get_Trainer(hps) -> StandardOnlineTrainer:
     if hps["task"]["name"] == "seh_frag":
         from gflownet.tasks.seh_frag import SEHFragTrainer
         return SEHFragTrainer
+    elif hps["task"]["name"] == "seh_plus_frag":
+        from gflownet.tasks.seh_plus_frag import SEHPlusFragTrainer
+        return SEHPlusFragTrainer
     elif hps["task"]["name"] in ["tdc_frag"]:
         from gflownet.tasks.tdc_frag import TDCFragTrainer
         return TDCFragTrainer
@@ -66,17 +77,17 @@ def get_Trainer(hps) -> StandardOnlineTrainer:
 
 if __name__ == "__main__":
     hps = {
-        "log_dir": f"./logs/mol_eval",  # _{time.strftime('%Y-%m-%d_%H-%M-%S')
-        "device": "cuda" if torch.cuda.is_available() else "cpu",
-        "overwrite_existing_exp": True,
-        "num_training_steps": 1000,  # 10_000,
+        "log_dir": f"./logs/test_no_buffer_lagging_0",
+        "device": "cuda",
+        "project": "gflownet_mol",
+        "seed": 0,  # TODO: how is seed handled?
+        "validate_every": 1000,  # 1000,
         "print_every": 10,
-        "validate_every": 100,
+        "num_training_steps": 15650,
         "num_workers": 8,
-        "num_final_gen_steps": 2,
-        "opt": {
-            "lr_decay": 20_000,
-        },
+        "num_final_gen_steps": 320,
+        "overwrite_existing_exp": True,
+        "exploration_helper": "no_exploration",
         "algo": {
             "method": "TB",
             "helper": "TB",
@@ -85,21 +96,46 @@ if __name__ == "__main__":
             "online_batch_size": 64,
             "replay_batch_size": 32,
             "offline_batch_size": 0,
+            "max_nodes": 9,
+            "illegal_action_logreward": -75,
+            "train_random_action_prob": 0.0,
+            "valid_random_action_prob": 0.0,
+            "train_random_traj_prob": 0.0,
             "valid_sample_cond_info": True,
             "tb": {
-                "do_length_normalize": False,  ###TODO
                 "variant": TBVariant.TB,
+                "Z_learning_rate": 1e-3,
+                "Z_lr_decay": 50_000,
+                "do_parameterize_p_b": False,
+                "do_length_normalize": False,  ###TODO
+                "epsilon": None,
+                "bootstrap_own_reward": False,
+                "cum_subtb": True,
             },
+        },
+        "model": {
+            "num_layers": 4,
+            "num_emb": 128,
+        },
+        "opt": {
+            "opt": "adam",
+            "learning_rate": 1e-4,
+            "lr_decay": 20_000,
+            "weight_decay": 1e-8,
+            "momentum": 0.9,
+            "clip_grad_type": "norm",
+            "clip_grad_param": 10,
+            "adam_eps": 1e-8,
         },
         "replay": {
             "use": True,
-            "capacity": 100,  # 100,
-            "warmup": 1,  # 10,
+            "capacity": 1000,
+            "warmup": 100,
             "hindsight_ratio": 0.0,
             "insertion": {
-                "strategy": "diversity_and_reward",  # "diversity_and_reward_fast",
+                "strategy": "diversity_and_reward",
                 "sim_thresh": 0.7,
-                "reward_thresh": 0.9,
+                "reward_thresh": 0.8,
             },
             "sampling": {
                 "strategy": "uniform",
@@ -113,27 +149,32 @@ if __name__ == "__main__":
             },
         },
         "cond": {
-            # "temperature": {
-            #     "sample_dist": "uniform",
-            #     "dist_params": [0, 64.0],
-            #     }
             "temperature": {
-                "sample_dist": "discrete",  # "discrete", #"uniform" #"constant"
-                "dist_params": [1.0, 2.0, 32.0], 
-                "num_thermometer_dim": 32,
-            },
+                "sample_dist": "constant",  # "uniform"
+                "dist_params": [32.0],  # [0, 64.0],  #[16,32,64,96,128]
+                "num_thermometer_dim": 1,
+                "val_temp": 32.0,
+            }
         },
-        "task": {
-            "name": "tdc_frag",
-            "helper": "tdc_frag",
-            "tdc": {
-                "oracle": "qed",
-            },
-        },
+        "task": {"name": "seh_plus_frag", "helper": "seh_frag", "tdc": {"oracle": "qed"}},
         "evaluation": {
-            "k": 10,
-            "reward_thresh": 8.0,
+            "k": 100,
+            "reward_thresh": 0.75,
             "distance_thresh": 0.3,
         },
     }
-    info_val = main(hps, use_wandb=False)
+
+    conf = OmegaConf.create(hps)
+    cli_conf = OmegaConf.from_cli()
+    merged = OmegaConf.merge(conf, cli_conf)
+    hps = OmegaConf.to_container(merged, resolve=True)
+    if "use_wandb" in hps:
+        use_wandb = hps["use_wandb"]
+        del hps["use_wandb"]
+    else:
+        use_wandb = False
+    if "exp_name" in hps:
+        hps["log_dir"] = f"./logs/{hps['exp_name']}_{hps['seed']}"
+        # del hps["exp_name"]
+
+    info_val = main(hps, use_wandb=use_wandb, entity="mokshjain")

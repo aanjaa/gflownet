@@ -69,8 +69,8 @@ class TDCTask(GFNTask):
     #         upper_bound = 1
     #     beta_enc = thermometer(torch.tensor(beta), 32, 0, upper_bound)  # TODO: hyperparameters
     #     return {'beta': torch.tensor(beta), 'encoding': beta_enc}
-    def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, Tensor]:
-        return self.temperature_conditional.sample(n)
+    def sample_conditional_information(self, n: int, train_it: int, is_validation: bool = False) -> Dict[str, Tensor]:
+        return self.temperature_conditional.sample(n, is_validation)
 
     # def cond_info_to_reward(self, cond_info: Dict[str, Tensor], flat_reward: FlatRewards) -> RewardScalar:
     #     if isinstance(flat_reward, list):

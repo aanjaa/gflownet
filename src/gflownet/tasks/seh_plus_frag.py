@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch_geometric.data as gd
 from rdkit.Chem.rdchem import Mol as RDMol
+from rdkit.Chem.QED import qed
 from torch import Tensor
 from torch.utils.data import Dataset
 
@@ -19,7 +20,7 @@ from gflownet.trainer import FlatRewards, GFNTask, RewardScalar
 from gflownet.utils.conditioning import TemperatureConditional
 
 
-class SEHTask(GFNTask):
+class SEHPlusTask(GFNTask):
     """Sets up a task where the reward is computed using a proxy for the binding energy of a molecule to
     Soluble Epoxide Hydrolases.
 
@@ -71,16 +72,19 @@ class SEHTask(GFNTask):
         preds = self.models["seh"](batch).reshape((-1,)).data.cpu()
         preds[preds.isnan()] = 0
         preds = self.flat_reward_transform(preds).clip(1e-4, 100).reshape((-1, 1))
+        # import pdb; pdb.set_trace();
+        qed_scores = np.array([qed(mol) for mol in mols])
+        # import pdb; pdb.set_trace()
+        preds = torch.as_tensor(qed_scores).float().reshape((-1, 1)) * preds
         return FlatRewards(preds), is_valid
 
 
-class SEHFragTrainer(StandardOnlineTrainer):
-    task: SEHTask
+class SEHPlusFragTrainer(StandardOnlineTrainer):
+    task: SEHPlusTask
 
     def set_default_hps(self, cfg: Config):
         cfg.hostname = socket.gethostname()
         cfg.pickle_mp_messages = False
-        cfg.mp_buffer_size = 32 * 1024 ** 2  # 32Mb should be enough for this setup
         cfg.num_workers = 5
 
         cfg.opt.learning_rate = 1e-4
@@ -120,7 +124,7 @@ class SEHFragTrainer(StandardOnlineTrainer):
         cfg.task.name = "seh"
 
     def setup_task(self):
-        self.task = SEHTask(
+        self.task = SEHPlusTask(
             dataset=self.training_data,
             cfg=self.cfg,
             rng=self.rng,

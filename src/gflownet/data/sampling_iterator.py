@@ -12,6 +12,7 @@ from torch.utils.data import Dataset, IterableDataset
 
 from gflownet.data.replay_buffer import ReplayBuffer
 from gflownet.envs.graph_building_env import GraphActionCategorical
+from gflownet.utils.multiprocessing_proxy import BufferPickler, SharedPinnedBuffer
 
 
 class SamplingIterator(IterableDataset):
@@ -35,6 +36,7 @@ class SamplingIterator(IterableDataset):
         online_batch_size: int = 1,
         offline_batch_size: int = 0,
         replay_batch_size: int = 0,
+        replay_buffer_warmup: int = 0,
         illegal_action_logreward: float = -50,
         stream: bool = True,
         replay_buffer: ReplayBuffer = None,
@@ -44,6 +46,8 @@ class SamplingIterator(IterableDataset):
         random_traj_prob: float = 0.0,
         hindsight_ratio: float = 0.0,
         init_train_iter: int = 0,
+        is_validation: bool = False,
+        mp_cfg = None,
     ):
         """Parameters
         ----------
@@ -90,7 +94,7 @@ class SamplingIterator(IterableDataset):
         self.data = dataset
         self.model = model
         self.replay_buffer = replay_buffer
-
+        self.warmup = replay_buffer_warmup
         self.replay_batch_size = replay_batch_size
         self.offline_batch_size = offline_batch_size
         self.online_batch_size = online_batch_size
@@ -107,7 +111,9 @@ class SamplingIterator(IterableDataset):
         self.random_traj_prob = random_traj_prob
         self.hindsight_ratio = hindsight_ratio
         self.train_it = init_train_iter
+        self.is_validation = is_validation
         self.do_validate_batch = False  # Turn this on for debugging
+        self.num_workers, _, self.mp_buffer_size = mp_cfg
 
         # Slightly weird semantics, but if we're sampling x given some fixed cond info (data)
         # then "offline" now refers to cond info and online to x, so no duplication and we don't end
@@ -122,6 +128,8 @@ class SamplingIterator(IterableDataset):
         self.log_dir = log_dir
         self.log = SQLiteLog()
         self.log_hooks: List[Callable] = []
+
+        self.setup_mp_buffers()
 
     def add_log_hook(self, hook: Callable):
         self.log_hooks.append(hook)
@@ -182,7 +190,7 @@ class SamplingIterator(IterableDataset):
             if self.sample_cond_info:
                 num_online = self.online_batch_size
                 cond_info = self.task.sample_conditional_information(
-                    num_offline + self.online_batch_size, self.train_it
+                    num_offline + self.online_batch_size, self.train_it, self.is_validation
                 )
 
                 # Sample some dataset data
@@ -212,6 +220,7 @@ class SamplingIterator(IterableDataset):
                         cond_info["encoding"][num_offline:],
                         random_action_prob=self.random_action_prob,
                         random_traj_prob=self.random_traj_prob,
+                        temper=not self.is_validation,
                     )
                 if self.algo.bootstrap_own_reward:
                     # The model can be trained to predict its own reward,
@@ -279,17 +288,22 @@ class SamplingIterator(IterableDataset):
                 # and sample replay_batch_size of them to add to the batch
 
                 # cond_info is a dict, so we need to convert it to a list of dicts
-                cond_info = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
+                cond_info_ = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
 
                 # push the online trajectories in the replay buffer and sample a new 'online' batch
                 for i in range(num_offline, len(trajs)):
+                    if not is_valid[i].item():
+                        continue
                     self.replay_buffer.push(
                         deepcopy(trajs[i]),
                         deepcopy(log_rewards[i]),
                         deepcopy(flat_rewards[i]),
-                        deepcopy(cond_info[i]),
+                        deepcopy(cond_info_[i]),
                         deepcopy(is_valid[i]),
                     )
+
+            if self.replay_buffer is not None and len(self.replay_buffer) > self.warmup:
+                cond_info = [{k: v[i] for k, v in cond_info.items()} for i in range(num_offline + num_online)]
                 replay_trajs, replay_logr, replay_fr, replay_condinfo, replay_valid = self.replay_buffer.sample(
                     self.replay_batch_size
                 )
@@ -337,11 +351,11 @@ class SamplingIterator(IterableDataset):
 
             # TODO: need to change this for non-molecule environments
             try:
-                smiles = [Chem.MolToSmiles(self.ctx.graph_to_mol(traj["result"])) for traj in trajs]
+                smiles = [self.ctx.object_to_log_repr(traj["result"]) for traj in trajs]
             except:
                 smiles = [traj["result"].__repr__() for traj in trajs]
             # alternative: [traj["smi"] for traj in trajs]
-            yield batch, (smiles, flat_rewards)
+            yield self._maybe_put_in_mp_buffer((batch, (smiles, flat_rewards)))
 
     def validate_batch(self, batch, trajs):
         for actions, atypes in [(batch.actions, self.ctx.action_type_order)] + (
@@ -396,6 +410,18 @@ class SamplingIterator(IterableDataset):
         )
 
         self.log.insert_many(data, data_labels)
+
+    def setup_mp_buffers(self):
+        if self.num_workers > 0 and self.mp_buffer_size:
+            self.result_buffer = [SharedPinnedBuffer(self.mp_buffer_size) for _ in range(self.num_workers)]
+        else:
+            self.mp_buffer_size = None
+
+    def _maybe_put_in_mp_buffer(self, batch):
+        if self.mp_buffer_size:
+            return (BufferPickler(self.result_buffer[self._wid]).dumps(batch), self._wid)
+        else:
+            return batch
 
 
 class SQLiteLog:
