@@ -4,7 +4,7 @@ prepend_name="verify_" #prepend to the name of experiment
 num_random_samples=2 #8 #how many times to sample from shared search space
 num_gpus=1 #4 #2 
 num_cpus=8 #32 #16 
-mem=20 #256 #100 #how much memory to allocate in GB
+mem=100 #256 #100 #how much memory to allocate in GB
 placement_gpu=1
 placement_cpu=8
 
@@ -30,8 +30,8 @@ for ((idx=0; idx<$num_trials; idx++)); do
   echo "#SBATCH --mem=${mem}GB" >> $script_name
   #echo "#SBATCH --time=2-00:00:00" >> $script_name
   echo "" >> $script_name
-  echo "module load python/3.9 cuda/11.7" >> $script_name
-  echo "source ~/venvs/gflownet/bin/activate" >> $script_name
+  echo "module load miniconda/3 cudatoolkit/12.2" >> $script_name
+  echo "conda activate gflownet_april" >> $script_name
   echo "python raytune.py --experiment_name ${experiment_name} --idx $idx --prepend_name ${prepend_name} --num_cpus $num_cpus --num_gpus $num_gpus --num_samples $num_random_samples --placement_gpu $placement_gpu --placement_cpu $placement_cpu" >> $script_name
   
   # Make the script executable

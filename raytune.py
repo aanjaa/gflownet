@@ -219,9 +219,9 @@ if __name__ == "__main__":
     parser.add_argument("--prepend_name", type=str, default="debug_")
     parser.add_argument("--num_cpus", type=int, default=4)
     parser.add_argument("--num_gpus", type=int, default=1)
-    parser.add_argument("--num_samples", type=int, default=1)
     parser.add_argument("--placement_cpu", type=int, default=4)
     parser.add_argument("--placement_gpu", type=float, default=1)
+    parser.add_argument("--num_samples", type=int, default=1)
     args = parser.parse_args()
 
     # group_factory = tune.PlacementGroupFactory([{'CPU': 4.0, 'GPU': .25}])
