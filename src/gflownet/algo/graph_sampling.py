@@ -175,7 +175,8 @@ class GraphSampler:
                             torch.save(model.state_dict(), 'model.pth')
                             with gzip.open('crash_dump.pkl.gz', 'wb') as f:
                                 pickle.dump(dump, f)
-                            raise e
+                            
+                            # raise e
                         done[i] = True
                         data[i]["is_valid"] = False
                         bck_logprob[i].append(torch.tensor([1.0], device=dev).log())
