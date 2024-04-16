@@ -13,8 +13,9 @@ from gflownet.algo.config import TBVariant
 import torch
 import time
 
-
 def main(hps, use_wandb=False):
+    #torch.multiprocessing.set_start_method('spawn')
+
     # hps must contain task.name, log_dir, overwrite_existing_exp
 
     # Measuring time

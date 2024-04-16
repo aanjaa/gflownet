@@ -48,7 +48,7 @@ def _expand_states(states, padding_token, eos_token):
     return seqs, actions
 
 class ESMRewardModelWrapper(Designer):
-    def __init__(self):
+    def __init__(self, seq_len: int):
         torch.nn.Module.__init__(self)
 
         self.allowed_AA = ''.join(
@@ -59,6 +59,7 @@ class ESMRewardModelWrapper(Designer):
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self._init_models()
+        self._init_no_target(seq_len)
 
 class ESMLogLikelihoodTask(GFNTask):
     def __init__(
@@ -69,7 +70,7 @@ class ESMLogLikelihoodTask(GFNTask):
         self.temperature_conditional = TemperatureConditional(cfg, rng)
         self.num_cond_dim = self.temperature_conditional.encoding_size()
 
-        self.esm_reward_calculator = ESMRewardModelWrapper()
+        self.esm_reward_calculator = ESMRewardModelWrapper(cfg.algo.max_len)
 
         self.language_model_energy_term_weight = cfg.task.esm_log_likelihood.language_model_energy_term_weight
 
@@ -91,7 +92,7 @@ class ESMLogLikelihoodTask(GFNTask):
         return RewardScalar(self.temperature_conditional.transform(cond_info, flat_reward))
 
     def compute_flat_rewards(self, objs: List[str]) -> Tuple[FlatRewards, torch.Tensor]:
-        log_rewards = self.get_log_rewards(objs)
+        log_rewards = self.get_log_rewards(objs).cpu()
 
         return FlatRewards(log_rewards[:, None]), torch.ones(len(objs), dtype=torch.bool)
 
