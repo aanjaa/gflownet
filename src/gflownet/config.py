@@ -112,7 +112,7 @@ class Config:
     num_workers: int = 0
     hostname: Optional[str] = None
     pickle_mp_messages: bool = False
-    mp_buffer_size: Optional[int] = 32 * 1024 ** 2  # 32Mb
+    mp_buffer_size: Optional[int] = 200 * 1024 ** 2 # 64Mb
     git_hash: Optional[str] = None
     overwrite_existing_exp: bool = True
     algo: AlgoConfig = AlgoConfig()

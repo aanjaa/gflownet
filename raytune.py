@@ -55,7 +55,7 @@ def run_raytune(search_space, ray_dir):
     # reduction_factor=3,
     # brackets=1,
     # )
-    np.random.seed(1212)
+    np.random.seed(args.seed)
     tuner = tune.Tuner(
         tune.with_resources(functools.partial(main, use_wandb=True), resources=group_factory),
         # functools.partial(main,use_wandb=True),
@@ -222,6 +222,7 @@ if __name__ == "__main__":
     parser.add_argument("--placement_cpu", type=int, default=4)
     parser.add_argument("--placement_gpu", type=float, default=1)
     parser.add_argument("--num_samples", type=int, default=1)
+    parser.add_argument("--seed", type=int, default=1212)
     args = parser.parse_args()
 
     # group_factory = tune.PlacementGroupFactory([{'CPU': 4.0, 'GPU': .25}])

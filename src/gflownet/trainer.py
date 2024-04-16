@@ -367,7 +367,8 @@ class GFNTrainer:
                 raise ValueError("parameters are not finite")
         except ValueError as e:
             os.makedirs(self.cfg.log_dir, exist_ok=True)
-            torch.save([self.model.state_dict(), batch, loss, info], open(self.cfg.log_dir + "/dump.pkl", "wb"))
+            #torch.save([self.model.state_dict(), batch, loss, info], open(self.cfg.log_dir + "/dump.pkl", #"wb"))
+            torch.save([self.model.state_dict(), loss, info], open(self.cfg.log_dir + "/dump.pkl", "wb"))
             raise e
 
         if step_info is not None:
