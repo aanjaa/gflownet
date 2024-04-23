@@ -24,10 +24,10 @@ from gflownet.tasks.main import main
 def run_raytune(search_space, ray_dir):
     if os.path.exists(ray_dir):
         if search_space["overwrite_existing_exp"]:
-            shutil.rmtree(search_space["log_dir"])
+            shutil.rmtree(ray_dir)
         else:
             raise ValueError(
-                f"Log dir {search_space['log_dir']} already exists. Set overwrite_existing_exp=True to delete it."
+                f"Log dir {ray_dir} already exists. Set overwrite_existing_exp=True to delete it."
             )
 
     os.makedirs(ray_dir)
@@ -55,6 +55,13 @@ def run_raytune(search_space, ray_dir):
     # reduction_factor=3,
     # brackets=1,
     # )
+
+    # Get absolute path
+    abs_path = os.path.abspath(ray_dir)
+
+    # # Add file scheme
+    uri = 'file://' + abs_path
+
     np.random.seed(args.seed)
     tuner = tune.Tuner(
         tune.with_resources(functools.partial(main, use_wandb=True), resources=group_factory),
@@ -69,7 +76,7 @@ def run_raytune(search_space, ray_dir):
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
             # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
         ),
-        run_config=air.RunConfig(name="details", verbose=2, local_dir=ray_dir, log_to_file=False),
+        run_config=air.RunConfig(name="details", verbose=2, storage_path=uri, local_dir=ray_dir, log_to_file=False),
     )
 
     # Start timing
@@ -261,7 +268,7 @@ if __name__ == "__main__":
         "exp_name": "test",
         "project": "test",
         "device": "cuda" if bool(args.num_gpus) else "cpu",
-        "seed": 0,  # TODO: how is seed handled?
+        "seed": 0,  
         "validate_every": validate_every,  # 1000,
         "print_every": 10,
         "num_training_steps": num_training_steps,  # 10_000,
