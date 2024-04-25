@@ -141,7 +141,7 @@ class TrajectoryBalance(GFNAlgorithm):
 
     def create_training_data_from_own_samples(
         self, model: TrajectoryBalanceModel, n: int, cond_info: Tensor, random_action_prob: float,
-        random_traj_prob: float = 0.0
+        random_traj_prob: float = 0.0, temper: bool = True
     ):
         """Generate trajectories by sampling a model
 
@@ -155,6 +155,8 @@ class TrajectoryBalance(GFNAlgorithm):
             Conditional information, shape (N, n_info)
         random_action_prob: float
             Probability of taking a random action
+        temper: float
+            Temper the model's logits
         Returns
         -------
         data: List[Dict]
@@ -176,7 +178,7 @@ class TrajectoryBalance(GFNAlgorithm):
             rand_data = self.graph_sampler.sample_from_model(model, n_rand, cond_info[:n_rand], dev, 1)
             n = n - n_rand
             cond_info = cond_info[n_rand:]
-        data = self.graph_sampler.sample_from_model(model, n, cond_info, dev, random_action_prob)
+        data = self.graph_sampler.sample_from_model(model, n, cond_info, dev, random_action_prob, temper)
         
         if random_traj_prob > 0:
             # for key, value in data:
@@ -505,7 +507,8 @@ class TrajectoryBalance(GFNAlgorithm):
             "invalid_losses": (invalid_mask * traj_losses).sum() / (invalid_mask.sum() + 1e-4),
             "logZ": log_Z.mean(),
             "loss": loss.item(),
-            "flat_rewards": batch.flat_rewards.mean().item()
+            "flat_rewards": batch.flat_rewards.mean().item(),
+            "flat_rewards_max": batch.flat_rewards.max().item(),
         }
         return loss, info
 

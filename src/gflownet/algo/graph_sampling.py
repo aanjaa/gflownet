@@ -56,7 +56,7 @@ class GraphSampler:
         self.consider_masks_complete = ctx.consider_masks_complete if hasattr(ctx, "consider_masks_complete") else False
 
     def sample_from_model(
-        self, model: nn.Module, n: int, cond_info: Tensor, dev: torch.device, random_action_prob: float = 0.0
+        self, model: nn.Module, n: int, cond_info: Tensor, dev: torch.device, random_action_prob: float = 0.0, temper: bool = True
     ):
         """Samples a model in a minibatch
 
@@ -70,7 +70,10 @@ class GraphSampler:
             Conditional information of each trajectory, shape (n, n_info)
         dev: torch.device
             Device on which data is manipulated
-
+        random_action_prob: float
+            Probability of taking a random action
+        temper: bool
+            Whether to apply temperature to the logits
         Returns
         -------
         data: List[Dict]
@@ -121,7 +124,7 @@ class GraphSampler:
                     is_random_action[b][:, None] * torch.ones_like(i) * m * 100 + i * (1 - is_random_action[b][:, None])
                     for i, m, b in zip(fwd_cat.logits, masks, fwd_cat.batch)
                 ]
-            if self.sample_temp != 1:
+            if self.sample_temp != 1 and temper:
                 sample_cat = copy.copy(fwd_cat)
                 sample_cat.logits = [i / self.sample_temp for i in fwd_cat.logits]
                 actions = sample_cat.sample()
@@ -143,13 +146,37 @@ class GraphSampler:
                     gp = graphs[i]
                     try:
                         # self.env.step can raise AssertionError if the action is illegal
+                        assert fwd_cat.log_prob(actions, logprobs=fwd_cat.masks).min() > 0
                         gp = self.env.step(graphs[i], graph_actions[j])
                         assert len(gp.nodes) <= self.max_nodes
                     except AssertionError as e:
                         if self.consider_masks_complete:
                             # If masks are considered complete, then we can safely say that we've encountered a bug
                             # since the agent should only be able to take legal actions (that would not raise an error)
-                            raise e
+                            dump = {
+                                'env': self.env,
+                                'i': i,
+                                'j': j,
+                                'graph': graphs,
+                                'actions': actions,
+                                'graph_actions': graph_actions,
+                                'step': t,
+                                'done': done,
+                                'fwd_logprob': fwd_logprob,
+                                'bck_logprob': bck_logprob,
+                                'bck_a': bck_a,
+                                'cond_info': cond_info,
+                                'data': data,
+                                'fwd_cat': fwd_cat,
+                                'torch_graphs': torch_graphs,
+                            }
+                            import pickle
+                            import gzip
+                            torch.save(model.state_dict(), 'model.pth')
+                            with gzip.open('crash_dump.pkl.gz', 'wb') as f:
+                                pickle.dump(dump, f)
+                            
+                            # raise e
                         done[i] = True
                         data[i]["is_valid"] = False
                         bck_logprob[i].append(torch.tensor([1.0], device=dev).log())

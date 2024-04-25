@@ -102,7 +102,8 @@ class FlowMatching(TrajectoryBalance):  # TODO: FM inherits from TB but we could
             # have multiple possible parents).
 
         # convert actions to aidx
-        parent_actions = [pact for parent in parents for pact, pstate in parent]
+        parents_ = [p[0] for p in parents]
+        parent_actions = [pact for parent in parents_ for pact, pstate in parent]
         parent_actionidcs = [self.ctx.GraphAction_to_aidx(gdata, a) for gdata, a in zip(parent_graphs, parent_actions)]
         # convert state to Data
         state_graphs = [self.ctx.graph_to_Data(i[0], t) for tj in trajs for t, i in enumerate(tj["traj"][1:])]
@@ -115,7 +116,7 @@ class FlowMatching(TrajectoryBalance):  # TODO: FM inherits from TB but we could
 
         # Create a batch from [*parents, *states]. This order will make it easier when computing the loss
         batch = self.ctx.collate(parent_graphs + state_graphs)
-        batch.num_parents = torch.tensor([len(i) for i in parents])
+        batch.num_parents = torch.tensor([len(i) for i in parents_])
         batch.traj_lens = torch.tensor([len(i["traj"]) for i in trajs])
         batch.parent_acts = torch.tensor(parent_actionidcs)
         batch.terminal_acts = torch.tensor(terminal_actions)
@@ -192,5 +193,6 @@ class FlowMatching(TrajectoryBalance):  # TODO: FM inherits from TB but we could
             "loss": loss.item(),
             "logZ": logZ.mean().item(),
             "flat_rewards": batch.flat_rewards.mean().item(),
+            "flat_rewards_max": batch.flat_rewards.max().item(),
         }
         return loss, info

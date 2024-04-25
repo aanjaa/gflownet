@@ -30,8 +30,8 @@ class ToySeqTask(GFNTask):
         self.num_cond_dim = self.temperature_conditional.encoding_size()
         self.norm = cfg.algo.max_len / min(map(len, seqs))
 
-    def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, Tensor]:
-        return self.temperature_conditional.sample(n)
+    def sample_conditional_information(self, n: int, train_it: int, is_validation: bool = False) -> Dict[str, Tensor]:
+        return self.temperature_conditional.sample(n, False)
 
     def cond_info_to_logreward(self, cond_info: Dict[str, Tensor], flat_reward: FlatRewards) -> RewardScalar:
         return RewardScalar(self.temperature_conditional.transform(cond_info, flat_reward))

@@ -112,6 +112,7 @@ class Config:
     num_workers: int = 0
     hostname: Optional[str] = None
     pickle_mp_messages: bool = False
+    mp_buffer_size: Optional[int] = 200 * 1024 ** 2 # 64Mb
     git_hash: Optional[str] = None
     overwrite_existing_exp: bool = True
     algo: AlgoConfig = AlgoConfig()
@@ -121,3 +122,4 @@ class Config:
     task: TasksConfig = TasksConfig()
     cond: ConditionalsConfig = ConditionalsConfig()
     evaluation: EvaluationConfig = EvaluationConfig()
+    exploration_helper: Optional[str] = ""

@@ -137,6 +137,8 @@ class AlgoConfig:
     valid_sample_cond_info: bool = True
     sampling_tau: float = 0.0
     sample_temp: float = 1.0
+    reset_schedule: Optional[list] = None
+    reset_num_layers: int = 1
     tb: TBConfig = TBConfig()
     moql: MOQLConfig = MOQLConfig()
     a2c: A2CConfig = A2CConfig()

@@ -154,3 +154,5 @@ bash/
 # Setup scripts
 recreate_env_updated.sh
 recreate_env_outdated.sh
+
+plot_results_training_objectives.ipynb

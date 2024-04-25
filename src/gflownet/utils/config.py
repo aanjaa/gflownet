@@ -25,6 +25,7 @@ class TempCondConfig:
     sample_dist: str = "uniform"
     dist_params: List[Any] = field(default_factory=lambda: [0.5, 32])
     num_thermometer_dim: int = 32
+    val_temp: float = 1.0
 
 
 @dataclass
