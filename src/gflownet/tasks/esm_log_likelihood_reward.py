@@ -1,6 +1,6 @@
 from esm_reward.lm_design import Designer
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Callable, Dict, List, Tuple, Union
 from copy import deepcopy
 from torch.utils.data import TensorDataset
 from torchtyping import TensorType
@@ -48,7 +48,13 @@ def _expand_states(states, padding_token, eos_token):
     return seqs, actions
 
 class ESMRewardModelWrapper(Designer):
-    def __init__(self, seq_len: int):
+    def __init__(
+        self,
+        seq_len: int,
+        language_model_energy_term_weight: float,
+        ngram_energy_term_weight: float,
+        ngram_orders: List[int]
+    ):
         torch.nn.Module.__init__(self)
 
         self.allowed_AA = ''.join(
@@ -61,40 +67,16 @@ class ESMRewardModelWrapper(Designer):
         self._init_models()
         self._init_no_target(seq_len)
 
-class ESMLogLikelihoodTask(GFNTask):
-    def __init__(
-        self,
-        cfg: Config,
-        rng: np.random.Generator
-    ):
-        self.temperature_conditional = TemperatureConditional(cfg, rng)
-        self.num_cond_dim = self.temperature_conditional.encoding_size()
+        self.language_model_energy_term_weight = language_model_energy_term_weight
+        self.ngram_energy_term_weight = ngram_energy_term_weight
+        self.ngram_orders = ngram_orders
 
-        self.esm_reward_calculator = ESMRewardModelWrapper(cfg.algo.max_len)
-
-        self.language_model_energy_term_weight = cfg.task.esm_log_likelihood.language_model_energy_term_weight
-
-        self.ngram_energy_term_weight = cfg.task.esm_log_likelihood.ngram_energy_term_weight
-        self.ngram_orders = cfg.task.esm_log_likelihood.ngram_orders
-
-        self.all_esm_toks = self.esm_reward_calculator.vocab.all_toks
+        self.all_esm_toks = self.vocab.all_toks
         self.esm_vocab_char_to_idx = {
             char: idx
             for idx, char in enumerate(self.all_esm_toks)
-            if char in self.esm_reward_calculator.allowed_AA
+            if char in self.allowed_AA
         }
-
-
-    def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, torch.Tensor]:
-        return self.temperature_conditional.sample(n)
-
-    def cond_info_to_logreward(self, cond_info: Dict[str, torch.Tensor], flat_reward: FlatRewards) -> RewardScalar:
-        return RewardScalar(self.temperature_conditional.transform(cond_info, flat_reward))
-
-    def compute_flat_rewards(self, objs: List[str]) -> Tuple[FlatRewards, torch.Tensor]:
-        log_rewards = self.get_log_rewards(objs).cpu()
-
-        return FlatRewards(log_rewards[:, None]), torch.ones(len(objs), dtype=torch.bool)
 
     def _encode(
         self,
@@ -123,20 +105,67 @@ class ESMLogLikelihoodTask(GFNTask):
 
         return F.one_hot(int_esm_encoded_seqs, len(self.all_esm_toks)).float()
 
-    def get_log_rewards(
-        self,
-        sequences: List[str]
-    ) -> TensorType["batch_size", float]:
-        rewards, _ = self.esm_reward_calculator.calc_total_loss(
+    def calc_total_loss(self, sequences: List[str]):
+    #    LM_w,
+    #    struct_w,
+    #    ngram_w,
+    #    ngram_orders,
+    #    temp_struct=None
+    #):
+        return super().calc_total_loss(
             x=self._encode(sequences),
             mask=None,
             LM_w=self.language_model_energy_term_weight,
             struct_w=False,
             ngram_w=self.ngram_energy_term_weight,
             ngram_orders=self.ngram_orders
+        )[0]
+
+class ESMLogLikelihoodTask(GFNTask):
+    def __init__(
+        self,
+        cfg: Config,
+        rng: np.random.Generator,
+        wrap_model: Callable[[torch.nn.Module], torch.nn.Module] = None,
+    ):
+        self.temperature_conditional = TemperatureConditional(cfg, rng)
+        self.num_cond_dim = self.temperature_conditional.encoding_size()
+        self._wrap_model = wrap_model
+
+        esm_reward_calculator = ESMRewardModelWrapper(
+            cfg.algo.max_len,
+            cfg.task.esm_log_likelihood.language_model_energy_term_weight,
+            cfg.task.esm_log_likelihood.ngram_energy_term_weight,
+            cfg.task.esm_log_likelihood.ngram_orders
+        )
+        self.esm_reward_calculator, self.device = self._wrap_model(
+            esm_reward_calculator,
+            send_to_device=True
         )
 
-        return -rewards
+
+    def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, torch.Tensor]:
+        return self.temperature_conditional.sample(n)
+
+    def cond_info_to_logreward(self, cond_info: Dict[str, torch.Tensor], flat_reward: FlatRewards) -> RewardScalar:
+        return RewardScalar(self.temperature_conditional.transform(cond_info, flat_reward))
+
+    def compute_flat_rewards(self, objs: List[str]) -> Tuple[FlatRewards, torch.Tensor]:
+        log_rewards = self.get_log_rewards(objs)[0]
+
+        return FlatRewards(log_rewards[:, None]), torch.ones(len(objs), dtype=torch.bool)
+
+    def get_log_rewards(
+        self,
+        sequences: List[str]
+    ) -> TensorType["batch_size", float]:
+        return self.esm_reward_calculator.calc_total_loss(sequences=sequences),
+        #    mask=None,
+        #    LM_w=self.language_model_energy_term_weight,
+        #    struct_w=False,
+        #    ngram_w=self.ngram_energy_term_weight,
+        #    ngram_orders=self.ngram_orders
+        #)
 
 class ESMLogLikelihoodTrainer(StandardOnlineTrainer):
     task: ESMLogLikelihoodTask
@@ -180,6 +209,7 @@ class ESMLogLikelihoodTrainer(StandardOnlineTrainer):
         self.task = ESMLogLikelihoodTask(
             cfg=self.cfg,
             rng=self.rng,
+            wrap_model=self._wrap_for_mp,
         )
 
     def setup_env_context(self):
