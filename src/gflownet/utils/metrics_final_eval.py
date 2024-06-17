@@ -47,7 +47,7 @@ def compute_metrics(gen_candidates_info_list, cand_type="mols", k=100, reward_th
         flat_rewards = []
         for batch in gen_candidates_info_list:
             candidates.extend(batch[0])
-            flat_rewards.extend(batch[1])
+            flat_rewards.extend(batch[1].cpu())
         assert len(candidates) == len(flat_rewards)
         dist_fn = edit_dist
         # mols = [Chem.MolFromSmiles(smi) for smi in smiles]
