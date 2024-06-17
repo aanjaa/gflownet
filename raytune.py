@@ -207,6 +207,12 @@ def exploration_config(exploration_strategy):
             "algo.valid_random_action_prob": 0,
             "algo.sample_temp": tune.choice([0.9, 1, 1.1, 1.2]),
         }
+    elif exploration_strategy == "temp_cond_log_uniform":
+        return {
+            "cond.temperature.sample_dist": "loguniform",
+            "cond.temperature.dist_params": [4, 96], 
+            "cond.temperature.num_thermometer_dim": 50,
+        }
     else:
         raise ValueError(f"Exploration strategy {exploration_strategy} not supported")
 
@@ -242,7 +248,7 @@ if __name__ == "__main__":
     training_objectives = ["FM", "DB", "SubTB1", "TB"]
     tasks = ["seh_plus_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
-    exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action"]
+    exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action", "temp_cond_log_uniform"]
 
     buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power" 
     buffer_insertions = ["fifo", "reward", "diversity", "diversity_and_reward"]
@@ -271,7 +277,7 @@ if __name__ == "__main__":
         "algo": {
             "method": "TB",
             "helper": "TB",
-            "sampling_tau": 0.99,
+            "sampling_tau": 0.95,
             "sample_temp": 1.0,
             "online_batch_size": 64,
             "replay_batch_size": 32,
