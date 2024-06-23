@@ -22,8 +22,11 @@ class Trajectory:
         self.cond_info = args[3]
         self.is_valid = args[4]
         self.smi = args[0]["smi"] if "smi" in args[0] else None
-        self.fp = Chem.RDKFingerprint(Chem.MolFromSmiles(args[0]["smi"])) if "smi" in args[0] else None
-
+        try: 
+            self.fp = Chem.RDKFingerprint(Chem.MolFromSmiles(args[0]["smi"])) if "smi" in args[0] else None
+        except:
+            # the object is not a molecule
+            self.fp = None
     # To make the object comparable for heapq
     def __lt__(self, other):
         return self.flat_reward < other.flat_reward
