@@ -143,9 +143,15 @@ class ESMLogLikelihoodTask(GFNTask):
             send_to_device=True
         )
 
+        self.cand_type = "seqs"
 
-    def sample_conditional_information(self, n: int, train_it: int) -> Dict[str, torch.Tensor]:
-        return self.temperature_conditional.sample(n)
+    def sample_conditional_information(
+        self,
+        n: int,
+        train_it: int,
+        is_validation: bool = False
+    ) -> Dict[str, torch.Tensor]:
+        return self.temperature_conditional.sample(n, is_validation)
 
     def cond_info_to_logreward(self, cond_info: Dict[str, torch.Tensor], flat_reward: FlatRewards) -> RewardScalar:
         return RewardScalar(self.temperature_conditional.transform(cond_info, flat_reward))
