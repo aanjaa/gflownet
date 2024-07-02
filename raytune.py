@@ -242,9 +242,9 @@ if __name__ == "__main__":
     )
     num_workers = args.placement_cpu
 
-    num_training_steps = 30 #1000 # 15_650 #10_000
+    num_training_steps = 15650 #1000 # 15_650 #10_000
     validate_every = 1000  #100 # 1000 #1000
-    num_final_gen_steps = 30 #100 # 320
+    num_final_gen_steps = 320 #100 # 320
 
     # metric = "val_loss"
     # mode = "min"
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives = ["FM", "DB", "SubTB1", "TB"]
-    tasks = ["esm_log_likelihood"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    tasks = ["seh_plus_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action"]
 
