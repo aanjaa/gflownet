@@ -93,6 +93,7 @@ def replace_dict_key(dictionary, key, value):
     if last_key in current_dict:
         current_dict[last_key] = value
     else:
+        import pdb; pdb.set_trace()
         raise KeyError(f"Key '{key}' does not exist in the dictionary.")
 
     return dictionary

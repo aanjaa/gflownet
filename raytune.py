@@ -76,7 +76,7 @@ def run_raytune(search_space, ray_dir):
             # search_alg=OptunaSearch(mode="min", metric="valid_loss_outer"),
             # search_alg=Repeater(OptunaSearch(mode="min", metric="valid_loss_outer"), repeat=2),
         ),
-        run_config=air.RunConfig(name="details", verbose=2, storage_path=uri, local_dir=ray_dir, log_to_file=False),
+        run_config=air.RunConfig(name="details", verbose=2, storage_path=uri, log_to_file=False),
     )
 
     # Start timing
@@ -167,6 +167,9 @@ def task_config(task):
     elif task == "sa_frag":
         task_name = "tdc_frag"
         oracle = "sa"
+
+    elif task == "esm_log_likelihood":
+        return {"task.name": task}
     else:
         raise ValueError(f"Task {task} not supported")
     return {"task.name": task_name, "task.helper": task, "task.tdc.oracle": oracle}
@@ -186,7 +189,7 @@ def exploration_config(exploration_strategy):
             "algo.train_random_action_prob": tune.choice([0.01, 0.05, 0.1, 0.15, 0.2]),
             "algo.valid_random_action_prob": 0,
         }
-    
+
     elif exploration_strategy == "e_random_traj":
         return {
             "algo.train_random_traj_prob": tune.choice([0.1, 0.2, 0.3, 0.4, 0.5]), #TODO
@@ -198,16 +201,17 @@ def exploration_config(exploration_strategy):
             # "cond.temperature.dist_params": tune.choice([96, 48, 32, 16, 8]), #TODO: any other values to try?
             # "cond.temperature.num_thermometer_dim": 1,
         }
-    
+
     elif exploration_strategy == "temp_cond":
         return {
             "cond.temperature.sample_dist": "discrete",
-            "cond.temperature.dist_params": [1,2,4,8,16,32,64,96], 
+            "cond.temperature.dist_params": [1,2,4,8,16,32,64,96],
             "cond.temperature.num_thermometer_dim": 50,
         }
-    
+
     elif exploration_strategy == "no_exploration":
         return {}
+
     elif exploration_strategy == "temp_and_random_action":
         return {
             "algo.train_random_action_prob": tune.choice([0.01, 0.05, 0.1]),
@@ -258,7 +262,7 @@ if __name__ == "__main__":
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action", "temp_cond_log_uniform"]
 
-    buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power" 
+    buffer_samplings = ["uniform", "weighted", "quantile"]  # "weighted_power"
     buffer_insertions = ["fifo", "reward", "diversity", "diversity_and_reward"]
     buffer_sizes = [1000, 10_000]
 
@@ -274,7 +278,7 @@ if __name__ == "__main__":
         "exp_name": "test",
         "project": "test",
         "device": "cuda" if bool(args.num_gpus) else "cpu",
-        "seed": 0,  
+        "seed": 0,
         "validate_every": validate_every,  # 1000,
         "print_every": 10,
         "num_training_steps": num_training_steps,  # 10_000,
@@ -374,7 +378,7 @@ if __name__ == "__main__":
     search_spaces = []
     names = []
     if args.experiment_name == "training_objectives":
-        for task in tasks: 
+        for task in tasks:
             for training_objective in training_objectives:
                 name = f"{task}_{training_objective}"
                 changes_config = {
@@ -432,5 +436,5 @@ if __name__ == "__main__":
     print(
         f"Running run number {args.idx} out of {len(search_spaces)} with log_dir {ray_dir}"
     )
-    
+
     run_raytune(search_spaces[args.idx], ray_dir)

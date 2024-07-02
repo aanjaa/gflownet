@@ -21,7 +21,6 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
     torch.cuda.manual_seed_all(seed)
 
-
 def main(hps, use_wandb=False, entity="evaluating-gfns"):
     # hps must contain task.name, log_dir, overwrite_existing_exp
     # Measuring time
@@ -71,6 +70,9 @@ def get_Trainer(hps) -> StandardOnlineTrainer:
     elif hps["task"]["name"] in ["rna_bind"]:
         from gflownet.tasks.rna_bind import RNABindTrainer
         return RNABindTrainer
+    elif hps["task"]["name"] == "esm_log_likelihood":
+        from gflownet.tasks.esm_log_likelihood_reward import ESMLogLikelihoodTrainer
+        return ESMLogLikelihoodTrainer
     else:
         raise ValueError(f"Unknown task!")
 
