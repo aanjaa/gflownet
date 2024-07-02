@@ -106,12 +106,6 @@ class ESMRewardModelWrapper(Designer):
         return F.one_hot(int_esm_encoded_seqs, len(self.all_esm_toks)).float()
 
     def calc_total_loss(self, sequences: List[str]):
-    #    LM_w,
-    #    struct_w,
-    #    ngram_w,
-    #    ngram_orders,
-    #    temp_struct=None
-    #):
         return super().calc_total_loss(
             x=self._encode(sequences),
             mask=None,
@@ -157,7 +151,7 @@ class ESMLogLikelihoodTask(GFNTask):
         return RewardScalar(self.temperature_conditional.transform(cond_info, flat_reward))
 
     def compute_flat_rewards(self, objs: List[str]) -> Tuple[FlatRewards, torch.Tensor]:
-        log_rewards = self.get_log_rewards(objs)[0]
+        log_rewards = self.get_log_rewards(objs)[0].cpu()
 
         return FlatRewards(log_rewards[:, None]), torch.ones(len(objs), dtype=torch.bool)
 
@@ -166,12 +160,6 @@ class ESMLogLikelihoodTask(GFNTask):
         sequences: List[str]
     ) -> TensorType["batch_size", float]:
         return self.esm_reward_calculator.calc_total_loss(sequences=sequences),
-        #    mask=None,
-        #    LM_w=self.language_model_energy_term_weight,
-        #    struct_w=False,
-        #    ngram_w=self.ngram_energy_term_weight,
-        #    ngram_orders=self.ngram_orders
-        #)
 
 class ESMLogLikelihoodTrainer(StandardOnlineTrainer):
     task: ESMLogLikelihoodTask

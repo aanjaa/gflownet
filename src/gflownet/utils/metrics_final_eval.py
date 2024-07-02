@@ -17,7 +17,7 @@ try:
 except:
     print("`pip install levenshtein` to use `distance`")
 
-def mols_and_reward_from_path(path):  
+def mols_and_reward_from_path(path):
     df = read_db_data_in_folder(path)
     df = df.drop_duplicates(subset=["smi"])
 
@@ -47,14 +47,14 @@ def compute_metrics(gen_candidates_info_list, cand_type="mols", k=100, reward_th
         flat_rewards = []
         for batch in gen_candidates_info_list:
             candidates.extend(batch[0])
-            flat_rewards.extend(batch[1])
+            flat_rewards.extend(batch[1].cpu())
         assert len(candidates) == len(flat_rewards)
         dist_fn = edit_dist
         # mols = [Chem.MolFromSmiles(smi) for smi in smiles]
         # final_info = calculate_eval_metrics(mols,flat_rewards,k=k,reward_thresh=reward_thresh,tanimoto_thresh=tanimoto_thresh)
         # return final_info
-    
-    final_info = calculate_eval_metrics(candidates, flat_rewards, k=k, reward_thresh=reward_thresh, 
+
+    final_info = calculate_eval_metrics(candidates, flat_rewards, k=k, reward_thresh=reward_thresh,
                                         distance_thresh=distance_thresh, dist_fn=dist_fn)
     return final_info
 
@@ -77,13 +77,13 @@ def calculate_eval_metrics(cands, rewards, k=100, reward_thresh=8, distance_thre
     candidates = sorted(candidates, key=lambda m: m[0], reverse=True)
 
     avg_reward_in_topk_modes = compute_diverse_topk(candidates, k=k, distance_thresh=distance_thresh, dist_fn=dist_fn)
-    num_of_modes, num_candidates_above_reward_thresh = compute_num_of_modes(candidates, 
+    num_of_modes, num_candidates_above_reward_thresh = compute_num_of_modes(candidates,
                                                                             reward_thresh=reward_thresh,
                                                                             distance_thresh=distance_thresh,
                                                                             dist_fn=dist_fn)
-    
+
     return {
-        "avg_topk": avg_topk, 
+        "avg_topk": avg_topk,
         "avg_reward_in_topk_modes": avg_reward_in_topk_modes,
         "num_of_modes": num_of_modes,
         "max_reward": max(rewards).item(),
@@ -106,7 +106,7 @@ def compute_diverse_topk(candidates, k=100, distance_thresh=0.7, dist_fn=mol_dis
     mode_fps = [candidates[0][1]]
     for i in range(1, len(candidates)):
         # fp = Chem.RDKFingerprint(candidates[i][1])
-        # sim = DataStructs.BulkTanimotoSimilarity(fp, mode_fps) 
+        # sim = DataStructs.BulkTanimotoSimilarity(fp, mode_fps)
         dist = dist_fn(candidates[i][1], mode_fps)
         # if sim to any of the modes is less than thresh, add to modes
         if min(dist) > distance_thresh:
@@ -115,8 +115,8 @@ def compute_diverse_topk(candidates, k=100, distance_thresh=0.7, dist_fn=mol_dis
         if len(modes) >= k:
             # last_idx = i
             break
-    avg_reward_in_topk_modes = np.mean([i[0] for i in modes])  
-    return avg_reward_in_topk_modes 
+    avg_reward_in_topk_modes = np.mean([i[0] for i in modes])
+    return avg_reward_in_topk_modes
 
 
 def compute_num_of_modes(candidates, reward_thresh=8, distance_thresh=0.7, dist_fn=mol_dist):
@@ -127,12 +127,12 @@ def compute_num_of_modes(candidates, reward_thresh=8, distance_thresh=0.7, dist_
     num_candidates_above_reward_thresh = len(candidates)
     if num_candidates_above_reward_thresh == 0:
         return 0, 0
-    
+
     modes = [candidates[0]]
     mode_fps = [candidates[0][1]]
     for i in range(1, len(candidates)):
         # fp = Chem.RDKFingerprint(candidates[i][1])
-        # sim = DataStructs.BulkTanimotoSimilarity(fp, mode_fps) 
+        # sim = DataStructs.BulkTanimotoSimilarity(fp, mode_fps)
         dist = dist_fn(candidates[i][1], mode_fps)
         # if sim to any of the modes is less than thresh, add to modes
         if min(dist) > distance_thresh:
@@ -155,8 +155,8 @@ def read_db_data_in_folder(folder_path: str) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        A combined dataframe containing rows from the `results` table 
-        from all found databases in the folder. Returns an empty dataframe if none of the 
+        A combined dataframe containing rows from the `results` table
+        from all found databases in the folder. Returns an empty dataframe if none of the
         tables exist or other errors.
     """
     # Step 1: Identify all .db files in the directory
@@ -167,13 +167,13 @@ def read_db_data_in_folder(folder_path: str) -> pd.DataFrame:
 
     for db_path in db_files:
         conn = sqlite3.connect(db_path)
-        
+
         try:
             df = pd.read_sql("SELECT * FROM results", conn)
-            
+
             if columns is None:
                 columns = df.columns.tolist()
-            
+
             combined_data.append(df)
         except sqlite3.OperationalError as e:
             if "no such table: results" in str(e):
@@ -185,7 +185,7 @@ def read_db_data_in_folder(folder_path: str) -> pd.DataFrame:
 
     if not combined_data:
         return pd.DataFrame(columns=columns or [])
-    
+
     return pd.concat(combined_data, ignore_index=True)
 
 
