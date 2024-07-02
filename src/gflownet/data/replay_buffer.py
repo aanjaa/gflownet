@@ -23,9 +23,9 @@ class Trajectory:
         self.cond_info = args[3]
         self.is_valid = args[4]
         self.smi = args[0]["smi"] if "smi" in args[0] else None
-        try: 
+        if args[0]["type"] == "mols": 
             self.fp = Chem.RDKFingerprint(Chem.MolFromSmiles(args[0]["smi"])) if "smi" in args[0] else None
-        except:
+        else:
             # the object is not a molecule so use string repr
             self.fp = args[0]["smi"]
     # To make the object comparable for heapq
@@ -114,8 +114,12 @@ class ReplayBuffer(object):
         modes_fp = [traj.fp for (_,traj) in self.buffer]
         if all([v is None for v in modes_fp]):
             return 0
+        # import pdb; pdb.set_trace();
         if type(traj.fp) is not str:
-            sim = Similarity(traj.fp, modes_fp)
+            try:
+                sim = Similarity(traj.fp, modes_fp)
+            except:
+                import pdb; pdb.set_trace();
             max_sim = max(sim)
             return max_sim #, sim.index(max_sim)
         else:

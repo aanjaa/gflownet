@@ -294,10 +294,12 @@ class SamplingIterator(IterableDataset):
                 for i in range(num_offline, len(trajs)):
                     if not is_valid[i].item():
                         continue
-                    try:
+                    if self.task.cand_type == "mols":
                         trajs[i]["smi"] = self.ctx.object_to_log_repr(trajs[i]["result"])
-                    except: 
+                    else:
                         trajs[i]["smi"] = trajs[i]["result"].__repr__()
+                    trajs[i]["type"] = self.task.cand_type
+
                     self.replay_buffer.push(
                         deepcopy(trajs[i]),
                         deepcopy(log_rewards[i]),
