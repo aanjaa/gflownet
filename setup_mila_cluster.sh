@@ -13,7 +13,7 @@ wget https://data.pyg.org/whl/torch-2.1.0%2Bcu121/torch_sparse-0.6.18%2Bpt21cu12
 pip install torch_cluster-1.6.3+pt21cu121-cp310-cp310-linux_x86_64.whl
 pip install torch_scatter-2.1.2+pt21cu121-cp310-cp310-linux_x86_64.whl
 pip install torch_sparse-0.6.18+pt21cu121-cp310-cp310-linux_x86_64.whl
-cd /network/scratch/j/jarrid.rector-brooks/repos/eval_gfn_repo
+cd ~/gflownet
 pip install torch==2.1.2+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
 pip install -e . --find-links https://data.pyg.org/whl/torch-2.1.0+cu121.html
 pip install PyTDC levenshtein wandb fair-esm nltk hydra-core torchtyping
