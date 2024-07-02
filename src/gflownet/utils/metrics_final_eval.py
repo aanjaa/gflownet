@@ -67,7 +67,7 @@ def mol_dist(mol, mol_list):
 
 def edit_dist(seq, seq_list):
     # seqs_to_compare = [seq for seq in seq_list]
-    dist = [distance(seq, seq_list[i]) for i in range(len(seq_list))]
+    dist = [distance(seq, seq_list[i]) / max(len(seq), len(seq_list[i])) for i in range(len(seq_list))]
     return dist
 
 def calculate_eval_metrics(cands, rewards, k=100, reward_thresh=8, distance_thresh=0.7, dist_fn=mol_dist):

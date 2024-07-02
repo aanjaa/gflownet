@@ -11,6 +11,7 @@ from rdkit.DataStructs import BulkTanimotoSimilarity as Similarity
 from statistics import mean
 import copy
 import heapq
+from Levenshtein import distance
 
 
 class Trajectory:
@@ -25,8 +26,8 @@ class Trajectory:
         try: 
             self.fp = Chem.RDKFingerprint(Chem.MolFromSmiles(args[0]["smi"])) if "smi" in args[0] else None
         except:
-            # the object is not a molecule
-            self.fp = None
+            # the object is not a molecule so use string repr
+            self.fp = args[0]["smi"]
     # To make the object comparable for heapq
     def __lt__(self, other):
         return self.flat_reward < other.flat_reward
@@ -113,9 +114,14 @@ class ReplayBuffer(object):
         modes_fp = [traj.fp for (_,traj) in self.buffer]
         if all([v is None for v in modes_fp]):
             return 0
-        sim = Similarity(traj.fp, modes_fp)
-        max_sim = max(sim)
-        return max_sim #, sim.index(max_sim)
+        if type(traj.fp) is not str:
+            sim = Similarity(traj.fp, modes_fp)
+            max_sim = max(sim)
+            return max_sim #, sim.index(max_sim)
+        else:
+            sims = [1 - distance(traj.fp, fp) / max(len(fp), len(traj.fp)) for fp in modes_fp]
+            max_sim = max(sims)
+            return max_sim
 
     @property
     def min_reward(self):
@@ -140,7 +146,10 @@ class ReplayBuffer(object):
             # remove itself from the list of modes
             modes_fp_wo_self = copy.deepcopy(modes_fp)
             modes_fp_wo_self = modes_fp_wo_self[:i] + modes_fp_wo_self[i + 1 :]
-            sim = Similarity(traj.fp, modes_fp_wo_self)
+            if type(traj.fp) is str:
+                sim = [1 - distance(traj.fp, fp) / max(len(fp), len(traj.fp)) for fp in modes_fp_wo_self]
+            else:
+                sim = Similarity(traj.fp, modes_fp_wo_self)
             avg_sim_list.append(sum(sim) / len(sim))
             max_sim_list.append(max(sim))
             min_sim_list.append(min(sim))
