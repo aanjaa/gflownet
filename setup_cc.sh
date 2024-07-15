@@ -3,6 +3,7 @@ module load python/3.10 cuda/12.2 httpproxy
 virtualenv $SLURM_TMPDIR/env
 source $SLURM_TMPDIR/env/bin/activate
 # only necessary for RNA task
+module load viennarna/2.5.1
 # conda install -c bioconda viennarna -y
 
 cd ~/wheels

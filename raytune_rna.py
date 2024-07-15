@@ -167,6 +167,9 @@ def task_config(task):
     elif task == "sa_frag":
         task_name = "tdc_frag"
         oracle = "sa"
+    elif task == "rna_bind":
+        task_name = "rna_bind"
+        oracle = "qed"
     else:
         raise ValueError(f"Task {task} not supported")
     return {"task.name": task_name, "task.helper": task, "task.tdc.oracle": oracle}
@@ -254,7 +257,7 @@ if __name__ == "__main__":
     mode = "max"
 
     training_objectives = ["FM", "DB", "SubTB1", "TB"]
-    tasks = ["seh_plus_frag"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
+    tasks = ["rna_bind"]#, "qed_frag", "drd2_frag"]  #'sa_frag' gsk3_frag'
 
     exploration_strategies = ["e_random_action", "e_random_traj", "temp_fixed", "temp_cond", "no_exploration", "temp_and_random_action", "temp_cond_log_uniform"]
 
