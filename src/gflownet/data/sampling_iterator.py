@@ -294,10 +294,9 @@ class SamplingIterator(IterableDataset):
                 for i in range(num_offline, len(trajs)):
                     if not is_valid[i].item():
                         continue
-                    if self.task.cand_type == "mols":
-                        trajs[i]["smi"] = self.ctx.object_to_log_repr(trajs[i]["result"])
-                    else:
-                        trajs[i]["smi"] = trajs[i]["result"].__repr__()
+                    
+                    trajs[i]["smi"] = self.ctx.object_to_log_repr(trajs[i]["result"])
+                    
                     trajs[i]["type"] = self.task.cand_type
 
                     self.replay_buffer.push(
@@ -356,10 +355,9 @@ class SamplingIterator(IterableDataset):
             self.train_it += worker_info.num_workers if worker_info is not None else 1
 
             # TODO: need to change this for non-molecule environments
-            try:
-                smiles = [self.ctx.object_to_log_repr(traj["result"]) for traj in trajs]
-            except:
-                smiles = [traj["result"].__repr__() for traj in trajs]
+            
+            smiles = [self.ctx.object_to_log_repr(traj["result"]) for traj in trajs]
+            
             # alternative: [traj["smi"] for traj in trajs]
             yield self._maybe_put_in_mp_buffer((batch, (smiles, flat_rewards)))
 
